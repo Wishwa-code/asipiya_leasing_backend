@@ -1,0 +1,30 @@
+# --- Binaries & Executables ---
+# Compiled binaries (the results of go build)
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# --- Dependency Management ---
+# Most Go projects don't check in vendor/ (unless you have a specific reason)
+vendor/
+
+# --- Development & Environment ---
+# Environment variables (Sensitive data! 🔒)
+.env
+*.env
+
+# --- Testing & Coverage ---
+*.test
+*.out
+coverage.txt
+
+# --- IDE & System Files ---
+# VS Code
+.vscode/
+# JetBrains (GoLand)
+.idea/
+# macOS system files
+.DS_Store
