@@ -8,10 +8,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+    "github.com/gin-contrib/sessions"
+    "github.com/gin-contrib/sessions/cookie"
+    "github.com/utrack/gin-csrf"
 
 	// These paths must match your go.mod module name 🔗
 	"garment-management-backend/internal/auth"
 	"garment-management-backend/internal/models"
+
 )
 
 // func CORSMiddleware() gin.HandlerFunc {
@@ -35,8 +39,8 @@ func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:8082") // Best practice: Specify the origin 🎯
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+        c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-TOKEN")		
+        c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		if c.Request.Method == "OPTIONS" {
 			// Change: Use 204 (No Content) or 200, and Abort to stop Gin from looking for a route 🛑
@@ -50,12 +54,28 @@ func CORSMiddleware() gin.HandlerFunc {
 
 func main() {
 	r := gin.Default()
+
+    store := cookie.NewStore([]byte("secret-key-for-session"))
+
+    r.Use(sessions.Sessions("mysession", store))
     r.Use(CORSMiddleware())
+
+    r.Use(csrf.Middleware(csrf.Options{
+        Secret: "secret-key-for-csrf",
+        ErrorFunc: func(c *gin.Context) {
+            c.String(403, "CSRF token mismatch")
+            c.Abort()
+        },
+    }))
 
 	// Public Routes
 	r.GET("/ping", func(c *gin.Context) {
 		c.String(http.StatusOK, "pong")
 	})
+
+    r.GET("/csrf-token", func(c *gin.Context) {
+        c.JSON(200, gin.H{"token": csrf.GetToken(c)})
+    })
 
 	r.POST("/login", func(c *gin.Context) {
         var req models.LoginRequest
