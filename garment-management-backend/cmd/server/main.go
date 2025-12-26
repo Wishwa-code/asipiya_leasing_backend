@@ -2,17 +2,55 @@ package main
 
 import (
 	"net/http"
+    // "log"
+    // "time"
+    // "fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 
 	// These paths must match your go.mod module name 🔗
-	"basic/internal/auth"
-	"basic/internal/models"
+	"garment-management-backend/internal/auth"
+	"garment-management-backend/internal/models"
 )
+
+// func CORSMiddleware() gin.HandlerFunc {
+// 	return func(c *gin.Context) {
+// 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+// 		c.Writer.Header().
+// 			Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
+// 		c.Writer.Header().
+// 			Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
+// 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+// 		if c.Request.Method == "OPTIONS" {
+// 			c.Writer.Header().Set("Access-Control-Max-Age", "86400")
+// 			c.AbortWithStatus(http.StatusNoContent)
+// 			return
+// 		}
+// 		c.Next()
+// 	}
+// }
+
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:8082") // Best practice: Specify the origin 🎯
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		if c.Request.Method == "OPTIONS" {
+			// Change: Use 204 (No Content) or 200, and Abort to stop Gin from looking for a route 🛑
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
+		c.Next()
+	}
+}
 
 func main() {
 	r := gin.Default()
+    r.Use(CORSMiddleware())
 
 	// Public Routes
 	r.GET("/ping", func(c *gin.Context) {
@@ -77,6 +115,14 @@ func main() {
 			user := c.GetString("username")
 			c.JSON(http.StatusOK, gin.H{"message": "Welcome!", "user": user})
 		})
+
+        secure.POST("/logout", func(c *gin.Context) {
+            // In a stateless JWT setup, we simply return success.
+            // If you implement a "Blacklist" in Redis later, you would add the token to it here.
+            c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+        })
+
+
 	}
 
 	r.Run(":8080")
