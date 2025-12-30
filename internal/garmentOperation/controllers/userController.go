@@ -4,6 +4,7 @@ import (
     "net/http"
 	"gorm.io/gorm"
     "github.com/gin-gonic/gin"
+    "golang.org/x/crypto/bcrypt"
     "garment-management-backend/internal/models"
 )
 
@@ -24,10 +25,16 @@ func (ctrl *UserController) Store(c *gin.Context) {
         return
     }
 
+    hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+        return
+    }
+
     user := models.User{
         Name:     input.Name,
         Email:    input.Email,
-        Password: input.Password, 
+        Password: string(hashedPassword),
         NIC:      input.NIC,
         MobileNo: input.MobileNo,
         Address:  input.Address,
@@ -38,6 +45,8 @@ func (ctrl *UserController) Store(c *gin.Context) {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create user"})
         return
     }
+
+    user.Password = "" // Hide password in response
 
     c.JSON(http.StatusCreated, user)
 }

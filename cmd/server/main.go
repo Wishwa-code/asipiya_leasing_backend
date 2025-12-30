@@ -4,7 +4,7 @@ import (
 	"net/http"
     "log"
     // "time"
-    // "fmt"
+    "fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -45,14 +45,18 @@ func main() {
             c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
             return
         }
+        user, success := auth.CheckCredentials(database.DB, req.Username, req.Password)
 
-        if auth.CheckCredentials(req.Username, req.Password) {
+        if success {
             // Returns both Access and Refresh tokens
             tokens, err := auth.GenerateTokenPair(req.Username)
             if err != nil {
                 c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create tokens"})
                 return
             }
+            
+            fmt.Printf("🎉 Login Successful for user: %s\n", user.Name)
+
             c.JSON(http.StatusOK, tokens)
             return
         }
