@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -54,27 +55,66 @@ func ValidateToken(tokenString string) (*jwt.Token, error) {
 }
 
 // JwtMiddleware handles the 🛡️ protection of routes
+// func JwtMiddleware() gin.HandlerFunc {
+// 	return func(c *gin.Context) {
+// 		authHeader := c.GetHeader("Authorization")
+// 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+// 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+// 			c.Abort()
+// 			return
+// 		}
+
+// 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+// 		// Use the new ValidateToken helper to keep logic DRY 🌵
+// 		token, err := ValidateToken(tokenString)
+
+// 		if err != nil || !token.Valid {
+// 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+// 			c.Abort()
+// 			return
+// 		}
+
+// 		claims := token.Claims.(jwt.MapClaims)
+// 		c.Set("username", claims["username"])
+// 		c.Next()
+// 	}
+// }
+
 func JwtMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
-			c.Abort()
-			return
-		}
+    return func(c *gin.Context) {
+        authHeader := c.GetHeader("Authorization")
+        
+        // Log the incoming request path and if header exists 📝
+        log.Printf("[JWT] Checking auth for: %s %s", c.Request.Method, c.Request.URL.Path)
 
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		// Use the new ValidateToken helper to keep logic DRY 🌵
-		token, err := ValidateToken(tokenString)
+        if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+            log.Printf("[JWT] ❌ Missing or malformed Authorization header")
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+            c.Abort()
+            return
+        }
 
-		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
-			c.Abort()
-			return
-		}
+        tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+        token, err := ValidateToken(tokenString)
 
-		claims := token.Claims.(jwt.MapClaims)
-		c.Set("username", claims["username"])
-		c.Next()
-	}
+        if err != nil {
+            log.Printf("[JWT] ❌ Token validation error: %v", err)
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+            c.Abort()
+            return
+        }
+
+        if !token.Valid {
+            log.Printf("[JWT] ❌ Token is invalid")
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+            c.Abort()
+            return
+        }
+
+        claims := token.Claims.(jwt.MapClaims)
+        log.Printf("[JWT] ✅ Authorized user: %v", claims["username"])
+        
+        c.Set("username", claims["username"])
+        c.Next()
+    }
 }

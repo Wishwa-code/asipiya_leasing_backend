@@ -2,80 +2,42 @@ package main
 
 import (
 	"net/http"
-    // "log"
+    "log"
     // "time"
     // "fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-    "github.com/gin-contrib/sessions"
-    "github.com/gin-contrib/sessions/cookie"
-    "github.com/utrack/gin-csrf"
-
+    
 	// These paths must match your go.mod module name 🔗
 	"garment-management-backend/internal/auth"
+    "garment-management-backend/internal/database"
+    "garment-management-backend/internal/middleware"
 	"garment-management-backend/internal/models"
+    "garment-management-backend/internal/garmentOperation"
 
 )
 
-// func CORSMiddleware() gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-// 		c.Writer.Header().
-// 			Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
-// 		c.Writer.Header().
-// 			Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
-// 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-// 		if c.Request.Method == "OPTIONS" {
-// 			c.Writer.Header().Set("Access-Control-Max-Age", "86400")
-// 			c.AbortWithStatus(http.StatusNoContent)
-// 			return
-// 		}
-// 		c.Next()
-// 	}
-// }
-
-func CORSMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:8082") // Best practice: Specify the origin 🎯
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
-        c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-TOKEN")		
-        c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-
-		if c.Request.Method == "OPTIONS" {
-			// Change: Use 204 (No Content) or 200, and Abort to stop Gin from looking for a route 🛑
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
-		c.Next()
-	}
-}
-
 func main() {
+    database.Connect()
+    
+    sqlDB, err := database.DB.DB()
+    if err != nil {
+        log.Fatalf("Failed to get underlying DB: %v", err)
+    }
+    defer sqlDB.Close()
+
 	r := gin.Default()
+    r.Use(middleware.CORSMiddleware())
 
-    store := cookie.NewStore([]byte("secret-key-for-session"))
-
-    r.Use(sessions.Sessions("mysession", store))
-    r.Use(CORSMiddleware())
-
-    r.Use(csrf.Middleware(csrf.Options{
-        Secret: "secret-key-for-csrf",
-        ErrorFunc: func(c *gin.Context) {
-            c.String(403, "CSRF token mismatch")
-            c.Abort()
-        },
-    }))
+    r.NoRoute(middleware.CORSMiddleware(), func(c *gin.Context) {
+        c.JSON(404, gin.H{"message": "Route not found"})
+    })
 
 	// Public Routes
 	r.GET("/ping", func(c *gin.Context) {
 		c.String(http.StatusOK, "pong")
 	})
-
-    r.GET("/csrf-token", func(c *gin.Context) {
-        c.JSON(200, gin.H{"token": csrf.GetToken(c)})
-    })
 
 	r.POST("/login", func(c *gin.Context) {
         var req models.LoginRequest
@@ -144,6 +106,15 @@ func main() {
 
 
 	}
+
+    apiV1 := r.Group("/api")
+    apiV1.Use(auth.JwtMiddleware()) 
+    {
+        // Automatically registers all /plantation routes under /api/v1 🌿
+        garmentOperation.RegisterRoutes(apiV1)
+        
+        // Final URL will be: http://localhost:8080/api/v1/plantation/stats
+    }
 
 	r.Run(":8080")
 }
