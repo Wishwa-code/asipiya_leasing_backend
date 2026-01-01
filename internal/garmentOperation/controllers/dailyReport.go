@@ -31,6 +31,7 @@ func (ctrl *DailyAmountController) Store(c *gin.Context) {
         FirstOrCreate(&report, operationModels.DailyReport{
             EmployeeID: input.EmployeeID,
             Date:       today,
+            TotalWorkingMinutes: input.TotalWorkingMinutes,
         }).Error; err != nil {
         tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to handle daily report"})
@@ -71,6 +72,7 @@ func (ctrl *DailyAmountController) Store(c *gin.Context) {
             EmployeeID:       input.EmployeeID,
             StyleID:          styleID,
             Output:           input.Outputs[i],
+            SMV:               style.SMV, 
             WorkingMinutes:   input.WorkingMinutes[i],
             ProcessEfficiency: efficiency,
         }
@@ -83,20 +85,46 @@ func (ctrl *DailyAmountController) Store(c *gin.Context) {
     }
 
     // 3. Update Report Averages
-    var allAmounts []operationModels.DailyAmount
-    tx.Where("daily_report_id = ?", report.ID).Find(&allAmounts)
+    // var allAmounts []operationModels.DailyAmount
+    // tx.Where("daily_report_id = ?", report.ID).Find(&allAmounts)
 
-    totalEff := 0.0
-    for _, a := range allAmounts {
-        totalEff += a.ProcessEfficiency
+    // totalEff := 0.0
+    // for _, a := range allAmounts {
+    //     totalEff += a.ProcessEfficiency
+    // }
+
+    // report.EntriesCount = len(allAmounts)
+    // report.UserEfficiency = totalEff / float64(len(allAmounts))
+    // tx.Save(&report)
+
+    // tx.Commit()
+    // c.JSON(http.StatusCreated, gin.H{"message": "Daily amounts added successfully! 🎉"})
+    var allAmounts []operationModels.DailyAmount
+    // Preload "Style" to access SMV for precise calculation
+    if err := tx.Preload("Style").Where("daily_report_id = ?", report.ID).Find(&allAmounts).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to recalculate totals"})
+        return
     }
 
+    var totalEarnedMinutes float64
+    var totalWorkingMinutes float64
+
+    for _, a := range allAmounts {
+        totalEarnedMinutes += float64(a.Output) * a.Style.SMV
+        totalWorkingMinutes = input.TotalWorkingMinutes
+    }
+
+    if totalWorkingMinutes > 0 {
+        report.UserEfficiency = (totalEarnedMinutes / totalWorkingMinutes) * 100
+    } else {
+        report.UserEfficiency = 0
+    }
+    
     report.EntriesCount = len(allAmounts)
-    report.UserEfficiency = totalEff / float64(len(allAmounts))
     tx.Save(&report)
 
     tx.Commit()
-    c.JSON(http.StatusCreated, gin.H{"message": "Daily amounts added successfully! 🎉"})
 }
 
 func (ctrl *DailyAmountController) Index(c *gin.Context) {

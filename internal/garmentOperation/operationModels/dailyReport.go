@@ -12,6 +12,7 @@ type DailyReport struct {
     Date           time.Time      `json:"date"`
     UserEfficiency float64        `json:"user_efficiency"`
     EntriesCount   int            `json:"entries_count"`
+    TotalWorkingMinutes float64   `json:"total_working_minutes"`
     DailyAmounts   []DailyAmount  `gorm:"foreignKey:DailyReportID"`
 }
 
@@ -21,8 +22,9 @@ type DailyAmount struct {
     EmployeeID       uint    `json:"employee_id"`
 	Employee         Employee `gorm:"foreignKey:EmployeeID" json:"employee"`
     StyleID          uint    `json:"style_id"`
-	Style             Style    `gorm:"foreignKey:StyleID" json:"style"`
+	Style            Style    `gorm:"foreignKey:StyleID" json:"style"`
     Output           int     `json:"output"`
+    SMV              float64 `json:"smv"`    
     WorkingMinutes   float64 `json:"working_minutes"`
     ProcessEfficiency float64 `json:"process_efficiency"`
 }
@@ -30,6 +32,7 @@ type DailyAmount struct {
 // DailyAmountRequest handles the bulk array input from your Django logic
 type DailyAmountRequest struct {
     EmployeeID     uint      `json:"employee_id" binding:"required"`
+    TotalWorkingMinutes float64   `json:"total_working_minutes" binding:"required"`
     Styles         []uint    `json:"style" binding:"required"`
     Outputs        []int     `json:"output" binding:"required"`
     WorkingMinutes []float64 `json:"working_minutes" binding:"required"`
