@@ -40,6 +40,7 @@ func RegisterRoutes(rg *gin.RouterGroup) {
         {
             daily.GET("", dailyCtrl.Index)
             daily.POST("", dailyCtrl.Store)
+            daily.PUT("/:id", dailyCtrl.Update)
             daily.GET("verify-target/:id", dailyCtrl.VerifyStyleTarget)
         }
 

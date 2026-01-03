@@ -25,7 +25,8 @@ func (ctrl *StyleController) Store(c *gin.Context) {
     style := operationModels.Style{
         StyleCode: input.StyleCode,
         SMV:       input.SMV,
-        Target:    input.Target,
+        StyleCategoryCode: input.StyleCategoryCode,
+        StyleSerialNo: input.StyleSerialNo,
     }
 
     if err := ctrl.DB.Create(&style).Error; err != nil {
@@ -70,7 +71,8 @@ func (ctrl *StyleController) Update(c *gin.Context) {
     ctrl.DB.Model(&style).Updates(operationModels.Style{
         StyleCode: input.StyleCode,
         SMV:       input.SMV,
-        Target:    input.Target,
+        StyleCategoryCode: input.StyleCategoryCode,
+        StyleSerialNo: input.StyleSerialNo,
     })
 
     c.JSON(http.StatusOK, style)

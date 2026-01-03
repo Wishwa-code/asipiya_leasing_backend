@@ -38,7 +38,6 @@ func Connect() {
         &operationModels.DailyAmount{}, 
         &operationModels.Style{}, 
         &operationModels.Employee{},
-        // &models.Producttest{},
     )
 
 	if err != nil {

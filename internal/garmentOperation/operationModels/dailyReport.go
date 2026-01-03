@@ -39,14 +39,24 @@ type DailyAmountRequest struct {
 }
 
 type Style struct {
-    gorm.Model
-    StyleCode string  `gorm:"uniqueIndex;not null" json:"style_code"`
-    SMV       float64 `json:"smv"`
-    Target    int     `json:"target"`
+    gorm.Model 
+    StyleCode         string  `gorm:"uniqueIndex:idx_style_category_unique;not null" json:"style_code"`
+    StyleSerialNo      string  `json:"style_serial_no"`
+    StyleCategoryCode string  `gorm:"uniqueIndex:idx_style_category_unique;not null" json:"style_category_code"`
+    StylePart          string  `json:"style_part"`
+    StyleOperationName string  `json:"style_operation_name"`
+    StyleCategoryName  string  `json:"style_category_name"`
+    SMV                float64 `json:"smv"`
+    Target             int     `json:"target"`
 }
 
 type StyleRequest struct {
-    StyleCode string  `json:"style_code" binding:"required"`
-    SMV       float64 `json:"smv" binding:"required"`
-    Target    int     `json:"target" binding:"required"`
+    StyleSerialNo      string  `json:"style_serial_no"`
+    StyleCode          string  `json:"style_code" binding:"required"`
+    StyleCategoryCode  string  `json:"style_category_code" binding:"required"` 
+    StylePart          string  `json:"style_part"`
+    StyleOperationName string  `json:"style_operation_name"`
+    StyleCategoryName  string  `json:"style_category_name"`
+    SMV                float64 `json:"smv" binding:"required"`
+    Target             int     `json:"target"`
 }

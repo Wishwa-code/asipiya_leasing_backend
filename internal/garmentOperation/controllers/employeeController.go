@@ -21,9 +21,6 @@ func (ctrl *EmployeeController) Store(c *gin.Context) {
 
     employee := operationModels.Employee{
         Name:         input.Name,
-        Address:      input.Address,
-        EmployeeCode: input.EmployeeCode,
-        MobileNumber: input.MobileNumber,
         EfpNumber:    input.EfpNumber,
     }
 
@@ -68,9 +65,6 @@ func (ctrl *EmployeeController) Update(c *gin.Context) {
 
     ctrl.DB.Model(&employee).Updates(operationModels.Employee{
         Name:         input.Name,
-        Address:      input.Address,
-        EmployeeCode: input.EmployeeCode,
-        MobileNumber: input.MobileNumber,
         EfpNumber:    input.EfpNumber,
     })
 
