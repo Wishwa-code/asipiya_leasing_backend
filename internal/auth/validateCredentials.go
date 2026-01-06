@@ -1,10 +1,11 @@
 package auth
 
 import (
-		"fmt"
-		"gorm.io/gorm"
-		"garment-management-backend/internal/models"
-		"golang.org/x/crypto/bcrypt"
+	"fmt"
+	"garment-management-backend/internal/models"
+
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // CheckCredentials verifies the username and password 🔍
@@ -12,26 +13,25 @@ import (
 
 // func CheckCredentials(username, password string) bool {
 // 	fmt.Printf("CheckCredentials called for user: %s\n", username)
-	
+
 // 	TODO: Replace with database lookup or bcrypt comparison
 // 	return username == "admin" && password == "password"
 // }
 
 // func CheckCredentials(db *gorm.DB, email, password string) (*models.User, bool) {
 //     var user models.User
-    
+
 //     if err := db.Where("email = ?", email).First(&user).Error; err != nil {
-//         return nil, false 
+//         return nil, false
 //     }
 
 //     err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 //     if err != nil {
-//         return nil, false 
+//         return nil, false
 //     }
 
 //     return &user, true
 // }
-
 
 func CheckCredentials(db *gorm.DB, email, password string) (*models.User, bool) {
 	var user models.User
@@ -52,15 +52,10 @@ func CheckCredentials(db *gorm.DB, email, password string) (*models.User, bool) 
 	fmt.Printf("✅ DB Record Found: ID [%d] | Saved Password: [%s]\n", user.ID, user.Password)
 
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-    if err != nil {
-        return nil, false 
-    }
-	// ⚖️ Direct string comparison (Plain Text)
-	// if user.Password != password {
-	// 	// 📝 Log 4: Comparison failure
-	// 	fmt.Printf("🚫 Password Mismatch: Expected [%s] but got [%s]\n", user.Password, password)
-	// 	return nil, false
-	// }
+	if err != nil {
+		return nil, false
+	}
 
+	user.Password = "" // Extra layer of security
 	return &user, true
 }
