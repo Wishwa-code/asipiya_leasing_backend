@@ -13,19 +13,19 @@ type OperationDataController struct {
 }
 
 func (ctrl *OperationDataController) GetDailyAmounts(c *gin.Context) {
-    var amounts []operationModels.DailyAmount
+	var amounts []operationModels.DailyAmount
 
-    // Highlight: Using Preload to include related Style and Employee data
-    result := ctrl.DB.
-        Preload("Style").
-        Preload("Employee").
-        Order("created_at desc").
-        Find(&amounts)
+	// Highlight: Using Preload to include related Style and Employee data
+	result := ctrl.DB.
+		Preload("Style").
+		Preload("Employee").
+		Order("created_at desc").
+		Find(&amounts)
 
-    if result.Error != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch operation data"})
-        return
-    }
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch operation data"})
+		return
+	}
 
-    c.JSON(http.StatusOK, amounts)
+	c.JSON(http.StatusOK, amounts)
 }

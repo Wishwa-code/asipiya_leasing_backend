@@ -25,7 +25,7 @@ func (ctrl *UserController) Store(c *gin.Context) {
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
-	}
+	
 
 	if err := input.Validate(ctrl.DB); err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
@@ -94,6 +94,7 @@ func (ctrl *UserController) Store(c *gin.Context) {
 	user.Password = "" // Hide password in response
 
 	c.JSON(http.StatusCreated, user)
+}
 }
 
 // Index: List all Users

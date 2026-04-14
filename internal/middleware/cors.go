@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,15 +11,15 @@ func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Use c.Header instead of c.Writer.Header().Set to ensure persistence during Aborts 🚀
 		allowedOrigins := map[string]bool{
-            "http://localhost:8082":            true,
-            "https://vite-vue-two-rho.vercel.app": true,
-        }
+			"http://localhost:5174":               true,
+			"https://vite-vue-two-rho.vercel.app": true,
+		}
 
-        // Check if the current origin is allowed
-        origin := c.GetHeader("Origin")
-        if allowedOrigins[origin] {
-            c.Header("Access-Control-Allow-Origin", origin)
-        }
+		// Check if the current origin is allowed
+		origin := c.GetHeader("Origin")
+		if allowedOrigins[origin] {
+			c.Header("Access-Control-Allow-Origin", origin)
+		}
 		c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
 		c.Header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-XSRF-TOKEN, X-CSRF-TOKEN")
 		c.Header("Access-Control-Allow-Credentials", "true")
@@ -31,8 +32,6 @@ func CORSMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
-
-
 
 // package middleware
 

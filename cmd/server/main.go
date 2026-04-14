@@ -28,7 +28,9 @@ func main() {
 	defer sqlDB.Close()
 
 	r := gin.Default()
+	middleware.StartLogWorker() // Start the background worker once 🪵
 	r.Use(middleware.CORSMiddleware())
+	r.Use(middleware.AsyncOperationLogger()) // Use the async logger middleware ⚡
 
 	// Serve uploaded files 📂
 	r.Static("/uploads", "./uploads")
@@ -125,5 +127,5 @@ func main() {
 		// Final URL will be: http://localhost:8080/api/v1/plantation/stats
 	}
 
-	r.Run(":8080")
+	r.Run(":8084")
 }
