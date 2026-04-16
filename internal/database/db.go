@@ -8,6 +8,7 @@ import (
 	"log"
 
 	"garment-management-backend/internal/garmentOperation/operationModels"
+	leasingModels "garment-management-backend/internal/leasing/models"
 	"garment-management-backend/internal/models"
 	_ "github.com/lib/pq"
 )
@@ -36,6 +37,10 @@ func Connect() {
 		&operationModels.DailyAmount{},
 		&operationModels.Style{},
 		&operationModels.Employee{},
+		&leasingModels.Product{},
+		&leasingModels.ProductHasItem{},
+		&leasingModels.ProductAdditionalCharges{},
+		&leasingModels.ProductRequiredDocuments{},
 	)
 
 	if err != nil {
