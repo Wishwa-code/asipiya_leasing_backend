@@ -204,3 +204,16 @@ func (ctrl *ProductController) Index(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"data": response})
 }
+
+// GetItems handles GET /v1/leasing/products/:id/items
+func (ctrl *ProductController) GetItems(c *gin.Context) {
+	productID := c.Param("id")
+	var items []models.ProductHasItem
+
+	if err := ctrl.DB.Where("product_id = ?", productID).Find(&items).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch product items"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": items})
+}

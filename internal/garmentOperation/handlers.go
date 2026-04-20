@@ -54,7 +54,7 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 		{
 			employees.GET("", employeeCtrl.Index)
 			employees.POST("", employeeCtrl.Store)
-			employees.GET("/:id", employeeCtrl.Show)
+			employees.GET("/:id", employeeCtrl.Show)    
 			employees.PUT("/:id", employeeCtrl.Update)
 			employees.DELETE("/:id", employeeCtrl.Destroy)
 		}

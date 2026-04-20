@@ -273,3 +273,40 @@ func (ctrl *CustomerController) UploadDocument(c *gin.Context) {
 		"document_id": doc.ID,
 	})
 }
+
+// Search handles GET /api/customers/search?query=val
+func (ctrl *CustomerController) Search(c *gin.Context) {
+	query := c.Query("query")
+	var customers []models.Customer
+
+	if query == "" {
+		// Return empty list if no query
+		c.JSON(http.StatusOK, gin.H{"data": []models.Customer{}})
+		return
+	}
+
+	likeQuery := "%" + query + "%"
+	// Search by NewNic, OldNic, FirstName, LastName, CustomerCode
+	if err := ctrl.DB.Where("new_nic ILIKE ? OR old_nic ILIKE ? OR first_name ILIKE ? OR last_name ILIKE ? OR customer_code ILIKE ?", 
+		likeQuery, likeQuery, likeQuery, likeQuery, likeQuery).
+		Limit(20).
+		Find(&customers).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search customers"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": customers})
+}
+
+// GetBankAccounts handles GET /api/customers/:id/bank-accounts
+func (ctrl *CustomerController) GetBankAccounts(c *gin.Context) {
+	id := c.Param("id")
+	var accounts []models.CustomerBankAccount
+
+	if err := ctrl.DB.Where("customer_id = ?", id).Find(&accounts).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch bank accounts"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": accounts})
+}

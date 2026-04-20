@@ -11,7 +11,7 @@ func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Use c.Header instead of c.Writer.Header().Set to ensure persistence during Aborts 🚀
 		allowedOrigins := map[string]bool{
-			"http://localhost:5175":               true,
+			"http://localhost:5173":               true,
 			"https://vite-vue-two-rho.vercel.app": true,
 		}
 
