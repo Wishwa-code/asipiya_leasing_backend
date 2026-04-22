@@ -14,6 +14,12 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 	lookupCtrl := &controllers.LookupController{DB: database.DB}
 	leaseCtrl := &controllers.LeaseController{DB: database.DB}
 	supplierCtrl := &controllers.SupplierController{DB: database.DB}
+	seizerCtrl := &controllers.SeizerController{DB: database.DB}
+	introducerCtrl := &controllers.IntroducerController{DB: database.DB}
+	valuationCompanyCtrl := &controllers.ValuationCompanyController{DB: database.DB}
+	insuranceCompanyCtrl := &controllers.InsuranceCompanyController{DB: database.DB}
+	auctionCompanyCtrl := &controllers.AuctionCompanyController{DB: database.DB}
+	vehicleYardCtrl := &controllers.VehicleYardController{DB: database.DB}
 
 	v1 := rg.Group("/v1")
 	{
@@ -39,6 +45,54 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 			suppliers.POST("", supplierCtrl.Store)         // POST /api/v1/suppliers
 			suppliers.PUT("/:id", supplierCtrl.Update)     // PUT /api/v1/suppliers/:id
 			suppliers.DELETE("/:id", supplierCtrl.Destroy) // DELETE /api/v1/suppliers/:id
+		}
+
+		seizers := v1.Group("/seizers")
+		{
+			seizers.GET("", seizerCtrl.Index)
+			seizers.POST("", seizerCtrl.Store)
+			seizers.PUT("/:id", seizerCtrl.Update)
+			seizers.DELETE("/:id", seizerCtrl.Destroy)
+		}
+
+		introducers := v1.Group("/introducers")
+		{
+			introducers.GET("", introducerCtrl.Index)
+			introducers.POST("", introducerCtrl.Store)
+			introducers.PUT("/:id", introducerCtrl.Update)
+			introducers.DELETE("/:id", introducerCtrl.Destroy)
+		}
+
+		valuationCompanies := v1.Group("/valuation-companies")
+		{
+			valuationCompanies.GET("", valuationCompanyCtrl.Index)
+			valuationCompanies.POST("", valuationCompanyCtrl.Store)
+			valuationCompanies.PUT("/:id", valuationCompanyCtrl.Update)
+			valuationCompanies.DELETE("/:id", valuationCompanyCtrl.Destroy)
+		}
+
+		insuranceCompanies := v1.Group("/insurance-companies")
+		{
+			insuranceCompanies.GET("", insuranceCompanyCtrl.Index)
+			insuranceCompanies.POST("", insuranceCompanyCtrl.Store)
+			insuranceCompanies.PUT("/:id", insuranceCompanyCtrl.Update)
+			insuranceCompanies.DELETE("/:id", insuranceCompanyCtrl.Destroy)
+		}
+
+		auctionCompanies := v1.Group("/auction-companies")
+		{
+			auctionCompanies.GET("", auctionCompanyCtrl.Index)
+			auctionCompanies.POST("", auctionCompanyCtrl.Store)
+			auctionCompanies.PUT("/:id", auctionCompanyCtrl.Update)
+			auctionCompanies.DELETE("/:id", auctionCompanyCtrl.Destroy)
+		}
+
+		vehicleYards := v1.Group("/vehicle-yards")
+		{
+			vehicleYards.GET("", vehicleYardCtrl.Index)
+			vehicleYards.POST("", vehicleYardCtrl.Store)
+			vehicleYards.PUT("/:id", vehicleYardCtrl.Update)
+			vehicleYards.DELETE("/:id", vehicleYardCtrl.Destroy)
 		}
 
 		// Lookup routes

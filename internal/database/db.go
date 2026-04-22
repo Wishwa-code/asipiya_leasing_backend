@@ -51,6 +51,11 @@ func Connect() {
 		&leasingModels.InsuranceCompany{},
 		&leasingModels.VehicleType{},
 		&leasingModels.Supplier{},
+		&leasingModels.Seizer{},
+		&leasingModels.Introducer{},
+		&leasingModels.ValuationCompany{},
+		&leasingModels.AuctionCompany{},
+		&leasingModels.VehicleYard{},
 	)
 
 	if err != nil {
