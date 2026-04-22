@@ -41,6 +41,16 @@ func Connect() {
 		&leasingModels.ProductHasItem{},
 		&leasingModels.ProductAdditionalCharges{},
 		&leasingModels.ProductRequiredDocuments{},
+		&leasingModels.Customer{},
+		&leasingModels.CustomerOccupation{},
+		&leasingModels.CustomerBankAccount{},
+		&leasingModels.CustomerDocument{},
+		&leasingModels.CustomerSavingAccount{},
+		&leasingModels.CustomerLoan{},
+		&leasingModels.Bank{},
+		&leasingModels.InsuranceCompany{},
+		&leasingModels.VehicleType{},
+		&leasingModels.Supplier{},
 	)
 
 	if err != nil {

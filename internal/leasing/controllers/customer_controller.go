@@ -125,7 +125,7 @@ func (ctrl *CustomerController) Store(c *gin.Context) {
 
 	if err := tx.Create(&customer).Error; err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create customer"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create customer" + err.Error()})
 		return
 	}
 
@@ -171,6 +171,92 @@ func (ctrl *CustomerController) Store(c *gin.Context) {
 		"message":     "Customer created successfully",
 		"customer_id": customer.CustomerCode,
 	})
+}
+
+// Index handles GET /api/customers?code=...&nic=...&status=...&query=...
+func (ctrl *CustomerController) Index(c *gin.Context) {
+	var customers []models.Customer
+	db := ctrl.DB
+
+	// Filters
+	if code := c.Query("code"); code != "" {
+		db = db.Where("customer_code ILIKE ?", "%"+code+"%")
+	}
+	if nic := c.Query("nic"); nic != "" {
+		db = db.Where("new_nic ILIKE ? OR old_nic ILIKE ?", "%"+nic+"%", "%"+nic+"%")
+	}
+	if status := c.Query("status"); status != "" {
+		db = db.Where("status = ?", status)
+	}
+	if query := c.Query("query"); query != "" {
+		likeQuery := "%" + query + "%"
+		db = db.Where("full_name ILIKE ? OR first_name ILIKE ? OR last_name ILIKE ? OR customer_code ILIKE ? OR new_nic ILIKE ? OR old_nic ILIKE ?",
+			likeQuery, likeQuery, likeQuery, likeQuery, likeQuery, likeQuery)
+	}
+
+	if err := db.Find(&customers).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch customers"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": customers})
+}
+
+// Get handles GET /api/customers/:id
+func (ctrl *CustomerController) Get(c *gin.Context) {
+	id := c.Param("id")
+	var customer models.Customer
+
+	if err := ctrl.DB.Preload("Occupations").Preload("BankAccounts").Preload("Documents").First(&customer, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Customer not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": customer})
+}
+
+// UpdateStatus handles POST /api/customers/:id/status
+func (ctrl *CustomerController) UpdateStatus(c *gin.Context) {
+	id := c.Param("id")
+	var req struct {
+		Status string `json:"status" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := ctrl.DB.Model(&models.Customer{}).Where("id = ?", id).Update("status", req.Status).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Status updated successfully"})
+}
+
+// UpdateLocation handles POST /api/customers/:id/location
+func (ctrl *CustomerController) UpdateLocation(c *gin.Context) {
+	id := c.Param("id")
+	var req struct {
+		Latitude  float64 `json:"latitude"`
+		Longitude float64 `json:"longitude"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := ctrl.DB.Model(&models.Customer{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"latitude":  req.Latitude,
+		"longitude": req.Longitude,
+	}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update location"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Location updated successfully"})
 }
 
 // GenerateID handles GET /api/customers/generate-id

@@ -13,6 +13,7 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 	customerCtrl := &controllers.CustomerController{DB: database.DB}
 	lookupCtrl := &controllers.LookupController{DB: database.DB}
 	leaseCtrl := &controllers.LeaseController{DB: database.DB}
+	supplierCtrl := &controllers.SupplierController{DB: database.DB}
 
 	leasing := rg.Group("/leasing")
 	{
@@ -29,6 +30,15 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 		leasing.POST("/calculate", leaseCtrl.CalculateSummary) // POST /api/leasing/calculate
 	}
 
+	// Supplier routes
+	suppliers := rg.Group("/suppliers")
+	{
+		suppliers.GET("", supplierCtrl.Index)          // GET /api/suppliers
+		suppliers.POST("", supplierCtrl.Store)         // POST /api/suppliers
+		suppliers.PUT("/:id", supplierCtrl.Update)     // PUT /api/suppliers/:id
+		suppliers.DELETE("/:id", supplierCtrl.Destroy) // DELETE /api/suppliers/:id
+	}
+
 	// Lookup routes
 	lookups := rg.Group("/lookup")
 	{
@@ -41,9 +51,13 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 	// Customer routes (under /api — not /api/leasing — to match the frontend expectations)
 	customers := rg.Group("/customers")
 	{
+		customers.GET("", customerCtrl.Index)                         // GET /api/customers
 		customers.GET("/generate-id", customerCtrl.GenerateID)        // GET  /api/customers/generate-id
 		customers.GET("/search", customerCtrl.Search)                 // GET /api/customers/search
-		customers.POST("", customerCtrl.Store)                    // POST /api/customers
+		customers.POST("", customerCtrl.Store)                        // POST /api/customers
+		customers.GET("/:id", customerCtrl.Get)                       // GET /api/customers/:id
+		customers.POST("/:id/status", customerCtrl.UpdateStatus)      // POST /api/customers/:id/status
+		customers.POST("/:id/location", customerCtrl.UpdateLocation)  // POST /api/customers/:id/location
 		customers.GET("/:id/bank-accounts", customerCtrl.GetBankAccounts) // GET /api/customers/:id/bank-accounts
 		customers.POST("/:id/documents", customerCtrl.UploadDocument) // POST /api/customers/:id/documents
 	}
