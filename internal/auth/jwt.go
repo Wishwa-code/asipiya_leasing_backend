@@ -85,7 +85,7 @@ func JwtMiddleware() gin.HandlerFunc {
 		authHeader := c.GetHeader("Authorization")
 
 		// Log the incoming request path and if header exists 📝
-		log.Printf("[JWT] Checking auth for: %s %s", c.Request.Method, c.Request.URL.Path)
+		log.Printf("[JWT] Checking auth for: method =>  %s path => %s  auth header => %s", c.Request.Method, c.Request.URL.Path, authHeader)
 
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 			log.Printf("[JWT] ❌ Missing or malformed Authorization header")

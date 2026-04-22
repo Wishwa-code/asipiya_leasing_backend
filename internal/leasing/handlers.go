@@ -21,6 +21,7 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 			products.GET("", productCtrl.Index)                // GET  /api/leasing/products
 			products.POST("", productCtrl.Store)               // POST /api/leasing/products
 			products.GET("/:id", productCtrl.Get)              // GET  /api/leasing/products/:id
+			products.PUT("/:id", productCtrl.Update)           // PUT  /api/leasing/products/:id
 			products.GET("/:id/items", productCtrl.GetItems)   // GET  /api/leasing/products/:id/items
 			products.POST("/status", productCtrl.UpdateStatus) // POST /api/leasing/products/status
 		}

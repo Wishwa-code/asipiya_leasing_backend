@@ -3,6 +3,7 @@ package controllers
 import (
 	"garment-management-backend/internal/leasing/models"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -17,23 +18,26 @@ func (ctrl *ProductController) Store(c *gin.Context) {
 	// Let's bind the incoming payload strictly or mapping to our JSON format
 	// given by the frontend.
 	var req struct {
-		Name               string `json:"name"`
-		Code               string `json:"code"`
-		InterestMethodID   int    `json:"interest_method_id"` // could map to interest method or stored directly
-		Periods            int    `json:"periods"`
-		GuarantorsRequired int    `json:"guarantors_required"`
+		Name                   string `json:"name"`
+		Code                   string `json:"code"`
+		InterestMethod         string `json:"interest_method"`
+		LoanPeriodType         string `json:"loan_period_type"`
+		InterestPeriodType     string `json:"interest_period_type"`
+		CollectionPeriodType   string `json:"collection_period_type"`
+		CollectionDateStrategy string `json:"collection_date_strategy"`
+		GuarantorsRequired     int    `json:"guarantors_required"`
 
 		Configurations []struct {
-			Label        string  `json:"label"` // ProductItemName
-			MinLoan      float64 `json:"minLoan"`
-			MaxLoan      float64 `json:"maxLoan"`
-			MinInt       float64 `json:"minInt"`
-			MaxInt       float64 `json:"maxInt"`
-			MinPeriod    int     `json:"minPeriod"`
-			MaxPeriod    int     `json:"maxPeriod"`
-			Guarantors   int     `json:"guarantors"`
-			PenaltyType  string  `json:"penaltyType"`
-			PenaltyRate  float64 `json:"penaltyRate"`
+			Label       string  `json:"label"` // ProductItemName
+			MinLoan     float64 `json:"minLoan"`
+			MaxLoan     float64 `json:"maxLoan"`
+			MinInt      float64 `json:"minInt"`
+			MaxInt      float64 `json:"maxInt"`
+			MinPeriod   int     `json:"minPeriod"`
+			MaxPeriod   int     `json:"maxPeriod"`
+			Guarantors  int     `json:"guarantors"`
+			PenaltyType string  `json:"penaltyType"`
+			PenaltyRate float64 `json:"penaltyRate"`
 		} `json:"configurations"`
 
 		Charges []struct {
@@ -59,11 +63,15 @@ func (ctrl *ProductController) Store(c *gin.Context) {
 
 	// Map generic request to specific gorm models
 	product := models.Product{
-		ProductName:    req.Name,
-		ProductCode:    req.Code,
-		GuaranteeCount: req.GuarantorsRequired,
-		// Example mapping (some fields maybe omitted or defaulted depending on actual logic)
-		// For now we map what we have in the payload
+		ProductName:          req.Name,
+		ProductCode:          req.Code,
+		InterestMethod:       req.InterestMethod,
+		LoanPeriodType:       req.LoanPeriodType,
+		InterestPeriodType:   req.InterestPeriodType,
+		CollectionPeriodType: req.CollectionPeriodType,
+		CollectionDateType:   req.CollectionDateStrategy,
+		GuaranteeCount:       req.GuarantorsRequired,
+		Status:               "Active",
 	}
 
 	if err := tx.Create(&product).Error; err != nil {
@@ -75,17 +83,17 @@ func (ctrl *ProductController) Store(c *gin.Context) {
 	// Map configurations
 	for _, conf := range req.Configurations {
 		item := models.ProductHasItem{
-			ProductID:               product.ID,
-			ProductItemName:         conf.Label,
-			MinimumLoanAmount:       conf.MinLoan,
-			MaximumLoanAmount:       conf.MaxLoan,
-			MinimumInterest:         conf.MinInt,
-			MaximumInterest:         conf.MaxInt,
-			MinimumLoanPeriod:       conf.MinPeriod,
-			MaximumLoanPeriod:       conf.MaxPeriod,
-			RequiredGuaranteeCount:  conf.Guarantors,
-			PenaltyApplyType:        conf.PenaltyType,
-			PenaltyPercentage:       conf.PenaltyRate,
+			ProductID:              product.ID,
+			ProductItemName:        conf.Label,
+			MinimumLoanAmount:      conf.MinLoan,
+			MaximumLoanAmount:      conf.MaxLoan,
+			MinimumInterest:        conf.MinInt,
+			MaximumInterest:        conf.MaxInt,
+			MinimumLoanPeriod:      conf.MinPeriod,
+			MaximumLoanPeriod:      conf.MaxPeriod,
+			RequiredGuaranteeCount: conf.Guarantors,
+			PenaltyApplyType:       conf.PenaltyType,
+			PenaltyPercentage:      conf.PenaltyRate,
 		}
 		if err := tx.Create(&item).Error; err != nil {
 			tx.Rollback()
@@ -127,7 +135,7 @@ func (ctrl *ProductController) Store(c *gin.Context) {
 	// Commit Transaction
 	tx.Commit()
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Leasing product created successfully", "product_id": product.ID})
+	c.JSON(http.StatusCreated, gin.H{"message": "Leasing product created successfully", "product_id": product.ID, "product_data": product})
 }
 
 // Get handles GET /v1/leasing/products/:id
@@ -216,4 +224,153 @@ func (ctrl *ProductController) GetItems(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": items})
+}
+
+// Update handles PUT /v1/leasing/products/:id
+func (ctrl *ProductController) Update(c *gin.Context) {
+	id := c.Param("id")
+
+	// Same structure as Store, but we might want to handle the savingsAmount as well
+	var req struct {
+		Name                   string `json:"name"`
+		Code                   string `json:"code"`
+		InterestMethod         string `json:"interest_method"`
+		LoanPeriodType         string `json:"loan_period_type"`
+		InterestPeriodType     string `json:"interest_period_type"`
+		CollectionPeriodType   string `json:"collection_period_type"`
+		CollectionDateStrategy string `json:"collection_date_strategy"`
+		GuarantorsRequired     int    `json:"guarantors_required"`
+
+		Configurations []struct {
+			Label       string  `json:"label"` // ProductItemName
+			MinLoan     float64 `json:"minLoan"`
+			MaxLoan     float64 `json:"maxLoan"`
+			MinInt      float64 `json:"minInt"`
+			MaxInt      float64 `json:"maxInt"`
+			MinPeriod   int     `json:"minPeriod"`
+			MaxPeriod   int     `json:"maxPeriod"`
+			Guarantors  int     `json:"guarantors"`
+			PenaltyType string  `json:"penaltyType"`
+			PenaltyRate float64 `json:"penaltyRate"`
+			// SavingsAmount is sometimes sent as string from frontend
+			SavingsAmount interface{} `json:"savingsAmount"`
+		} `json:"configurations"`
+
+		Charges []struct {
+			Description string  `json:"description"`
+			Amount      float64 `json:"amount"`
+			Type        string  `json:"type"`      // fixed | percentage
+			Deduction   string  `json:"deduction"` // on_loan_disbursement | as_first_installment
+		} `json:"charges"`
+
+		Documents []struct {
+			Name   string `json:"name"`
+			Status string `json:"status"` // Required | Optional
+		} `json:"documents"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Begin Transaction
+	tx := ctrl.DB.Begin()
+
+	var product models.Product
+	if err := tx.First(&product, id).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+		return
+	}
+
+	// Update product main details
+	product.ProductName = req.Name
+	product.ProductCode = req.Code
+	product.InterestMethod = req.InterestMethod
+	product.LoanPeriodType = req.LoanPeriodType
+	product.InterestPeriodType = req.InterestPeriodType
+	product.CollectionPeriodType = req.CollectionPeriodType
+	product.CollectionDateType = req.CollectionDateStrategy
+	product.GuaranteeCount = req.GuarantorsRequired
+
+	if err := tx.Save(&product).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update product"})
+		return
+	}
+
+	// Clear and Re-create associations
+	// 1. Configurations
+	tx.Unscoped().Where("product_id = ?", id).Delete(&models.ProductHasItem{})
+	for _, conf := range req.Configurations {
+		// Handle SavingsAmount conversion if it's a string
+		var savingsAmt float64
+		switch v := conf.SavingsAmount.(type) {
+		case float64:
+			savingsAmt = v
+		case string:
+			if v != "" {
+				if parsed, err := strconv.ParseFloat(v, 64); err == nil {
+					savingsAmt = parsed
+				}
+			}
+		}
+
+		item := models.ProductHasItem{
+			ProductID:              product.ID,
+			ProductItemName:        conf.Label,
+			MinimumLoanAmount:      conf.MinLoan,
+			MaximumLoanAmount:      conf.MaxLoan,
+			MinimumInterest:        conf.MinInt,
+			MaximumInterest:        conf.MaxInt,
+			MinimumLoanPeriod:      conf.MinPeriod,
+			MaximumLoanPeriod:      conf.MaxPeriod,
+			RequiredGuaranteeCount: conf.Guarantors,
+			PenaltyApplyType:       conf.PenaltyType,
+			PenaltyPercentage:      conf.PenaltyRate,
+			SavingAmount:           savingsAmt,
+		}
+		if err := tx.Create(&item).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update configurations"})
+			return
+		}
+	}
+
+	// 2. Charges
+	tx.Unscoped().Where("product_id = ?", id).Delete(&models.ProductAdditionalCharges{})
+	for _, charge := range req.Charges {
+		chargeModel := models.ProductAdditionalCharges{
+			ProductID:     product.ID,
+			Description:   charge.Description,
+			Value:         charge.Amount,
+			ValueType:     charge.Type,
+			DeductionType: charge.Deduction,
+		}
+		if err := tx.Create(&chargeModel).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update charges"})
+			return
+		}
+	}
+
+	// 3. Documents
+	tx.Unscoped().Where("product_id = ?", id).Delete(&models.ProductRequiredDocuments{})
+	for _, doc := range req.Documents {
+		d := models.ProductRequiredDocuments{
+			ProductID:      product.ID,
+			Name:           doc.Name,
+			RequiredStatus: doc.Status,
+		}
+		if err := tx.Create(&d).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update required documents"})
+			return
+		}
+	}
+
+	tx.Commit()
+
+	c.JSON(http.StatusOK, gin.H{"message": "Product updated successfully", "product": product})
 }
