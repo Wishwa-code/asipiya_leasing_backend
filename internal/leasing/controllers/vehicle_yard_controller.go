@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"garment-management-backend/internal/leasing/models"
 	"net/http"
 
@@ -22,11 +23,43 @@ func (ctrl *VehicleYardController) Index(c *gin.Context) {
 }
 
 func (ctrl *VehicleYardController) Store(c *gin.Context) {
-	var req models.VehicleYard
+	var payload struct {
+		YardName      string      `json:"yard_name"`
+		Address       string      `json:"address"`
+		Province      string      `json:"province"`
+		District      string      `json:"district"`
+		DSD           string      `json:"dsd"`
+		YardContactNo string      `json:"yard_contact_no"`
+		ContactPerson string      `json:"contact_person"`
+		MobileNo      string      `json:"mobile_no"`
+		Status        interface{} `json:"status"`
+	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	statusStr := "Active"
+	if payload.Status != nil {
+		statusStr = fmt.Sprintf("%v", payload.Status)
+		if statusStr == "1" || statusStr == "true" {
+			statusStr = "Active"
+		} else if statusStr == "0" || statusStr == "false" {
+			statusStr = "Inactive"
+		}
+	}
+
+	req := models.VehicleYard{
+		YardName:      payload.YardName,
+		Address:       payload.Address,
+		Province:      payload.Province,
+		District:      payload.District,
+		DSD:           payload.DSD,
+		YardContactNo: payload.YardContactNo,
+		ContactPerson: payload.ContactPerson,
+		MobileNo:      payload.MobileNo,
+		Status:        statusStr,
 	}
 
 	if err := ctrl.DB.Create(&req).Error; err != nil {
@@ -45,21 +78,49 @@ func (ctrl *VehicleYardController) Update(c *gin.Context) {
 		return
 	}
 
-	var req models.VehicleYard
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var payload struct {
+		YardName      string      `json:"yard_name"`
+		Address       string      `json:"address"`
+		Province      string      `json:"province"`
+		District      string      `json:"district"`
+		DSD           string      `json:"dsd"`
+		YardContactNo string      `json:"yard_contact_no"`
+		ContactPerson string      `json:"contact_person"`
+		MobileNo      string      `json:"mobile_no"`
+		Status        interface{} `json:"status"`
+	}
+
+	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	req.ID = record.ID
-	req.CreatedAt = record.CreatedAt
+	statusStr := record.Status
+	if payload.Status != nil {
+		statusStr = fmt.Sprintf("%v", payload.Status)
+		if statusStr == "1" || statusStr == "true" {
+			statusStr = "Active"
+		} else if statusStr == "0" || statusStr == "false" {
+			statusStr = "Inactive"
+		}
+	}
 
-	if err := ctrl.DB.Save(&req).Error; err != nil {
+	record.YardName = payload.YardName
+	record.Address = payload.Address
+	record.Province = payload.Province
+	record.District = payload.District
+	record.DSD = payload.DSD
+	record.YardContactNo = payload.YardContactNo
+	record.ContactPerson = payload.ContactPerson
+	record.MobileNo = payload.MobileNo
+	record.Status = statusStr
+
+	if err := ctrl.DB.Save(&record).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update vehicle yard"})
 		return
 	}
 
-	c.JSON(http.StatusOK, req)
+	c.JSON(http.StatusOK, record)
 }
 
 func (ctrl *VehicleYardController) Destroy(c *gin.Context) {

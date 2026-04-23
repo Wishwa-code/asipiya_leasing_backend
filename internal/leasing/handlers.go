@@ -71,7 +71,7 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 			valuationCompanies.DELETE("/:id", valuationCompanyCtrl.Destroy)
 		}
 
-		insuranceCompanies := v1.Group("/insurance-companies")
+		insuranceCompanies := v1.Group("/insuarance-companies")
 		{
 			insuranceCompanies.GET("", insuranceCompanyCtrl.Index)
 			insuranceCompanies.POST("", insuranceCompanyCtrl.Store)
