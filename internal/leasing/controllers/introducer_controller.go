@@ -58,11 +58,13 @@ func (ctrl *IntroducerController) Store(c *gin.Context) {
 		}
 	}
 
-	bankDetailsStr := ""
+	bankDetailsStr := "{}"
 	if payload.BankDetails != nil {
 		switch v := payload.BankDetails.(type) {
 		case string:
-			bankDetailsStr = v
+			if v != "" {
+				bankDetailsStr = v
+			}
 		default:
 			b, _ := json.Marshal(v)
 			bankDetailsStr = string(b)
@@ -138,11 +140,18 @@ func (ctrl *IntroducerController) Update(c *gin.Context) {
 	if payload.BankDetails != nil {
 		switch v := payload.BankDetails.(type) {
 		case string:
-			bankDetailsStr = v
+			if v != "" {
+				bankDetailsStr = v
+			} else {
+				bankDetailsStr = "{}"
+			}
 		default:
 			b, _ := json.Marshal(v)
 			bankDetailsStr = string(b)
 		}
+	}
+	if bankDetailsStr == "" {
+		bankDetailsStr = "{}"
 	}
 
 	record.IntroducerType = payload.IntroducerType
