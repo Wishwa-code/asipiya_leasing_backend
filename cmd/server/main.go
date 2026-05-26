@@ -13,7 +13,6 @@ import (
 	// These paths must match your go.mod module name 🔗
 	"garment-management-backend/internal/auth"
 	"garment-management-backend/internal/database"
-	"garment-management-backend/internal/garmentOperation"
 	"garment-management-backend/internal/leasing"
 	"garment-management-backend/internal/middleware"
 	"garment-management-backend/internal/models"
@@ -123,7 +122,6 @@ func main() {
 	apiV1.Use(auth.JwtMiddleware())
 	{
 		// Automatically registers all /plantation routes under /api/v1 🌿
-		garmentOperation.RegisterRoutes(apiV1)
 		leasing.RegisterRoutes(apiV1)
 
 		// Final URL will be: http://localhost:8080/api/v1/plantation/stats

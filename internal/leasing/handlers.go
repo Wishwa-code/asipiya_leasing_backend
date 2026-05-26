@@ -118,6 +118,18 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 			customers.POST("/:id/documents", customerCtrl.UploadDocument) // POST /api/v1/customers/:id/documents
 		}
 
+		// Leasing Applications (Stepper workflow)
+		leasingAppCtrl := &controllers.LeasingApplicationController{DB: database.DB}
+		leasingApplications := v1.Group("/leasing-applications")
+		{
+			leasingApplications.GET("/drafts", leasingAppCtrl.GetDrafts) // Needs to be before /:id
+			leasingApplications.GET("/:id", leasingAppCtrl.Get)
+			leasingApplications.POST("/draft", leasingAppCtrl.CreateDraft)
+			leasingApplications.PUT("/:id/draft", leasingAppCtrl.UpdateDraft)
+			leasingApplications.POST("/:id/upload-document", leasingAppCtrl.UploadDocument)
+			leasingApplications.POST("/:id/submit", leasingAppCtrl.Submit)
+		}
+
 		// Location helper routes
 		locations := v1.Group("/locations")
 		{

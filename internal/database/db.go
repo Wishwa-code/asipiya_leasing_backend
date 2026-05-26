@@ -7,7 +7,6 @@ import (
 	"gorm.io/gorm"
 	"log"
 
-	"garment-management-backend/internal/garmentOperation/operationModels"
 	leasingModels "garment-management-backend/internal/leasing/models"
 	"garment-management-backend/internal/models"
 	_ "github.com/lib/pq"
@@ -33,10 +32,6 @@ func Connect() {
 
 	err = DB.AutoMigrate(
 		&models.User{},
-		&operationModels.DailyReport{},
-		&operationModels.DailyAmount{},
-		&operationModels.Style{},
-		&operationModels.Employee{},
 		&leasingModels.Product{},
 		&leasingModels.ProductHasItem{},
 		&leasingModels.ProductAdditionalCharges{},
@@ -56,6 +51,19 @@ func Connect() {
 		&leasingModels.ValuationCompany{},
 		&leasingModels.AuctionCompany{},
 		&leasingModels.VehicleYard{},
+
+		// Leasing Application (Stepper) Models
+		&leasingModels.LeasingApplication{},
+		&leasingModels.LeasingVehicle{},
+		&leasingModels.LeasingVehicleDocumentImage{},
+		&leasingModels.LeasingLoan{},
+		&leasingModels.LeasingGuarantor{},
+		&leasingModels.PdcSecurity{},
+		&leasingModels.PdcChequeDetail{},
+		&leasingModels.PdcCrBookDetail{},
+		&leasingModels.PdcDeedDetail{},
+		&leasingModels.LeasingChequeDefine{},
+		&leasingModels.LeasingChequeDefineItem{},
 	)
 
 	if err != nil {
