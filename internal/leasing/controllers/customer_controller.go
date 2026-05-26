@@ -372,9 +372,9 @@ func (ctrl *CustomerController) Search(c *gin.Context) {
 	}
 
 	likeQuery := "%" + query + "%"
-	// Search by NewNic, OldNic, FirstName, LastName, CustomerCode
-	if err := ctrl.DB.Where("new_nic ILIKE ? OR old_nic ILIKE ? OR first_name ILIKE ? OR last_name ILIKE ? OR customer_code ILIKE ?", 
-		likeQuery, likeQuery, likeQuery, likeQuery, likeQuery).
+	// Search by NewNic, OldNic, FirstName, LastName, FullName, CustomerCode
+	if err := ctrl.DB.Where("new_nic ILIKE ? OR old_nic ILIKE ? OR first_name ILIKE ? OR last_name ILIKE ? OR full_name ILIKE ? OR customer_code ILIKE ?", 
+		likeQuery, likeQuery, likeQuery, likeQuery, likeQuery, likeQuery).
 		Limit(20).
 		Find(&customers).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search customers"})
