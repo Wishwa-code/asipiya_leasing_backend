@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	adminModels "garment-management-backend/internal/admin/models"
 	"garment-management-backend/internal/leasing/models"
 	gmodels "garment-management-backend/internal/models"
 	"net/http"
@@ -35,7 +36,7 @@ func (ctrl *LookupController) GetInsuranceCompanies(c *gin.Context) {
 
 // GetVehicleTypes handles GET /api/lookup/vehicle-types
 func (ctrl *LookupController) GetVehicleTypes(c *gin.Context) {
-	var types []models.VehicleType
+	var types []adminModels.VehicleType
 	if err := ctrl.DB.Where("status = ?", "Active").Find(&types).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch vehicle types"})
 		return
@@ -68,4 +69,36 @@ func (ctrl *LookupController) GetMarketingExecutives(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": response})
+}
+
+// GetVehicleMakes handles GET /api/lookup/vehicle-makes?type_id=X
+func (ctrl *LookupController) GetVehicleMakes(c *gin.Context) {
+	var makes []adminModels.VehicleMake
+	query := ctrl.DB.Where("status = ?", "Active")
+
+	if typeIDStr := c.Query("type_id"); typeIDStr != "" {
+		query = query.Where("vehicle_type_id = ?", typeIDStr)
+	}
+
+	if err := query.Find(&makes).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch vehicle makes"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": makes})
+}
+
+// GetVehicleModels handles GET /api/lookup/vehicle-models?type_id=X
+func (ctrl *LookupController) GetVehicleModels(c *gin.Context) {
+	var models []adminModels.VehicleModel
+	query := ctrl.DB.Where("status = ?", "Active")
+
+	if typeIDStr := c.Query("type_id"); typeIDStr != "" {
+		query = query.Where("vehicle_type_id = ?", typeIDStr)
+	}
+
+	if err := query.Find(&models).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch vehicle models"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": models})
 }

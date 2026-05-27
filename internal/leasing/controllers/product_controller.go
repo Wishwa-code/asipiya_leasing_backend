@@ -180,8 +180,14 @@ func (ctrl *ProductController) Index(c *gin.Context) {
 
 	if err := ctrl.DB.Preload("ProductHasItems").
 		Preload("AdditionalCharges").
+		Preload("RequiredDocuments").
 		Find(&products).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
+		return
+	}
+
+	if c.Query("full") == "true" {
+		c.JSON(http.StatusOK, gin.H{"data": products})
 		return
 	}
 

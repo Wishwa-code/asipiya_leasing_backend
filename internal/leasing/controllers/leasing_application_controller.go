@@ -270,6 +270,15 @@ func (ctrl *LeasingApplicationController) Submit(c *gin.Context) {
 		return
 	}
 
+	// Link uploaded documents/images to the created vehicle record
+	if err := tx.Model(&models.LeasingVehicleDocumentImage{}).
+		Where("leasing_application_id = ?", app.ID).
+		Update("leasing_vehicle_id", fullData.Vehicle.ID).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to link uploaded documents to vehicle: " + err.Error()})
+		return
+	}
+
 	fullData.Loan.LeasingApplicationID = &app.ID
 	fullData.Loan.LeasingVehicleID = &fullData.Vehicle.ID
 	if err := tx.Create(&fullData.Loan).Error; err != nil {
@@ -399,4 +408,97 @@ func (ctrl *LeasingApplicationController) GetDrafts(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": response})
+}
+
+// UpdateDraftStep handles PUT /api/v1/leasing-applications/:id/draft/step/:step_name
+func (ctrl *LeasingApplicationController) UpdateDraftStep(c *gin.Context) {
+	id := c.Param("id")
+	stepName := c.Param("step_name")
+
+	// Read request body
+	bodyBytes, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return
+	}
+
+	// Parse step data into a map
+	var stepData map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &stepData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format: " + err.Error()})
+		return
+	}
+
+	// Load existing application
+	var app models.LeasingApplication
+	if err := ctrl.DB.First(&app, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Draft not found"})
+		return
+	}
+
+	// Parse existing progress data
+	var existingData map[string]interface{}
+	if app.CurrentProgressData != "" {
+		if err := json.Unmarshal([]byte(app.CurrentProgressData), &existingData); err != nil {
+			existingData = make(map[string]interface{})
+		}
+	} else {
+		existingData = make(map[string]interface{})
+	}
+
+	// Merge stepData into existingData
+	for k, v := range stepData {
+		existingData[k] = v
+	}
+
+	// Marshal back to JSON
+	updatedBytes, err := json.Marshal(existingData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to serialize progress data"})
+		return
+	}
+
+	// Prepare fields for updates
+	updateFields := map[string]interface{}{
+		"current_progress_data": string(updatedBytes),
+	}
+
+	// Sync customer_id and introducer_id if present
+	if cidVal, ok := stepData["customer_id"]; ok {
+		if cidNum, err := parseUint(cidVal); err == nil {
+			updateFields["customer_id"] = cidNum
+		}
+	}
+	if iidVal, ok := stepData["introducer_id"]; ok {
+		if iidNum, err := parseUint(iidVal); err == nil {
+			updateFields["introducer_id"] = iidNum
+		} else if iidVal == nil || iidVal == "" {
+			updateFields["introducer_id"] = nil
+		}
+	}
+
+	if err := ctrl.DB.Model(&app).Updates(updateFields).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save draft step"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":       fmt.Sprintf("Step '%s' draft updated successfully", stepName),
+		"step_statuses": validateDraft(updatedBytes),
+	})
+}
+
+func parseUint(val interface{}) (uint, error) {
+	switch v := val.(type) {
+	case float64:
+		return uint(v), nil
+	case int:
+		return uint(v), nil
+	case string:
+		var n uint
+		if _, err := fmt.Sscanf(v, "%d", &n); err == nil {
+			return n, nil
+		}
+	}
+	return 0, fmt.Errorf("invalid type for uint")
 }

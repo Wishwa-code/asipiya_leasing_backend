@@ -101,6 +101,8 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 			lookups.GET("/banks", lookupCtrl.GetBanks)
 			lookups.GET("/insurance-companies", lookupCtrl.GetInsuranceCompanies)
 			lookups.GET("/vehicle-types", lookupCtrl.GetVehicleTypes)
+			lookups.GET("/vehicle-makes", lookupCtrl.GetVehicleMakes)
+			lookups.GET("/vehicle-models", lookupCtrl.GetVehicleModels)
 			lookups.GET("/marketing-executives", lookupCtrl.GetMarketingExecutives)
 		}
 
@@ -126,6 +128,7 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 			leasingApplications.GET("/:id", leasingAppCtrl.Get)
 			leasingApplications.POST("/draft", leasingAppCtrl.CreateDraft)
 			leasingApplications.PUT("/:id/draft", leasingAppCtrl.UpdateDraft)
+			leasingApplications.PUT("/:id/draft/step/:step_name", leasingAppCtrl.UpdateDraftStep)
 			leasingApplications.POST("/:id/upload-document", leasingAppCtrl.UploadDocument)
 			leasingApplications.POST("/:id/submit", leasingAppCtrl.Submit)
 		}

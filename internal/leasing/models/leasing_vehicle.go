@@ -1,6 +1,9 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	adminModels "garment-management-backend/internal/admin/models"
+	"gorm.io/gorm"
+)
 
 // LeasingVehicle represents the vehicle linked to a Leasing Application
 type LeasingVehicle struct {
@@ -34,7 +37,9 @@ type LeasingVehicle struct {
 
 	// Relationships
 	LeasingApplication *LeasingApplication           `gorm:"foreignKey:LeasingApplicationID" json:"leasing_application,omitempty"`
-	VehicleType        *VehicleType                  `gorm:"foreignKey:VehicleTypeID" json:"vehicle_type,omitempty"`
+	VehicleType        *adminModels.VehicleType      `gorm:"foreignKey:VehicleTypeID" json:"vehicle_type,omitempty"`
+	VehicleMake        *adminModels.VehicleMake      `gorm:"foreignKey:VehicleMakeID" json:"vehicle_make,omitempty"`
+	VehicleModel       *adminModels.VehicleModel     `gorm:"foreignKey:VehicleModelID" json:"vehicle_model,omitempty"`
 	ValuationCompany   *ValuationCompany             `gorm:"foreignKey:ValuationCompanyID" json:"valuation_company,omitempty"`
 	InsuranceCompany   *InsuranceCompany             `gorm:"foreignKey:InsuranceCompanyID" json:"insurance_company,omitempty"`
 	Supplier           *Supplier                     `gorm:"foreignKey:SupplierID" json:"supplier,omitempty"`
