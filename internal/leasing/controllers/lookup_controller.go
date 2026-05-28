@@ -102,3 +102,23 @@ func (ctrl *LookupController) GetVehicleModels(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"data": models})
 }
+
+// GetRmvData handles GET /api/v1/lookup/rmv-data?reg_no=X&chassis_no=Y
+func (ctrl *LookupController) GetRmvData(c *gin.Context) {
+	regNo := c.Query("reg_no")
+	chassisNo := c.Query("chassis_no")
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"registered_no":      regNo,
+			"chasis_no":          chassisNo,
+			"vehicle_make":       "Toyota",
+			"vehicle_model":      "Prius",
+			"manufacturing_year": "2018",
+			"fuel_type":          "Hybrid",
+			"engine_no":          "1NZ-345678",
+			"engine_cc":          "1500",
+			"gross_weight":       "1350",
+		},
+	})
+}

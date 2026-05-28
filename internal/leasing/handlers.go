@@ -104,6 +104,7 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 			lookups.GET("/vehicle-makes", lookupCtrl.GetVehicleMakes)
 			lookups.GET("/vehicle-models", lookupCtrl.GetVehicleModels)
 			lookups.GET("/marketing-executives", lookupCtrl.GetMarketingExecutives)
+			lookups.GET("/rmv-data", lookupCtrl.GetRmvData)
 		}
 
 		// Customer routes

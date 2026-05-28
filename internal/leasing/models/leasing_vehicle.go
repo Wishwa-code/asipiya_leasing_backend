@@ -1,6 +1,9 @@
 package models
 
 import (
+	"fmt"
+	"time"
+
 	adminModels "garment-management-backend/internal/admin/models"
 	"gorm.io/gorm"
 )
@@ -35,6 +38,31 @@ type LeasingVehicle struct {
 	ForcedSaleValue      float64 `gorm:"column:forced_sale_value" json:"forced_sale_value"`
 	InvoiceValue         float64 `gorm:"column:invoice_value" json:"invoice_value"`
 
+	// New RMV / CR Master Data
+	DateOfFirstRegistration string  `gorm:"column:date_of_first_registration;type:varchar(50)" json:"cr_first_reg_date"`
+	AbsoluteOwner           string  `gorm:"column:absolute_owner;type:varchar(255)" json:"cr_absolute_owner"`
+	RegisteredOwner         string  `gorm:"column:registered_owner;type:varchar(255)" json:"cr_registered_owner"`
+	PreviousOwnersCount     int     `gorm:"column:previous_owners_count;default:0" json:"cr_previous_owners_count"`
+	VariantCode             string  `gorm:"column:variant_code;type:varchar(100)" json:"cr_variant"`
+	Transmission            string  `gorm:"column:transmission;type:varchar(50)" json:"cr_transmission"`
+	SeatingCapacity         int     `gorm:"column:seating_capacity" json:"cr_seating_capacity"`
+	UnladenWeight           float64 `gorm:"column:unladen_weight" json:"cr_unladen_weight"`
+	MileageAtRegistration   float64 `gorm:"column:mileage_at_registration" json:"cr_mileage"`
+
+	// CR Certificate Metadata
+	CrSerialNo    string `gorm:"column:cr_serial_no;type:varchar(100)" json:"cr_serial_no"`
+	CrIssueDate   string `gorm:"column:cr_issue_date;type:varchar(50)" json:"cr_issue_date"`
+	CrIssueOffice string `gorm:"column:cr_issue_office;type:varchar(100)" json:"cr_issue_office"`
+	CrType        string `gorm:"column:cr_type;type:varchar(100)" json:"cr_type"` // e.g. Original / Duplicate
+	KeysReceived  int    `gorm:"column:keys_received;default:2" json:"cr_keys_received"`
+	DuplicateKey  bool   `gorm:"column:duplicate_key;default:false" json:"duplicate_key"`
+
+	// Verification Audit Fields
+	RmvVerified       bool   `gorm:"column:rmv_verified;default:false" json:"rmv_verified"`
+	RmvVerifiedAt     string `gorm:"column:rmv_verified_at;type:varchar(100)" json:"rmv_verified_at"`
+	DataMatched       bool   `gorm:"column:data_matched;default:true" json:"data_matched"`
+	DiscrepancyReason string `gorm:"column:discrepancy_reason;type:text" json:"discrepancy_reason"`
+
 	// Relationships
 	LeasingApplication *LeasingApplication           `gorm:"foreignKey:LeasingApplicationID" json:"leasing_application,omitempty"`
 	VehicleType        *adminModels.VehicleType      `gorm:"foreignKey:VehicleTypeID" json:"vehicle_type,omitempty"`
@@ -48,4 +76,61 @@ type LeasingVehicle struct {
 
 func (LeasingVehicle) TableName() string {
 	return "leasing_vehicles"
+}
+
+// BeforeUpdate is a GORM hook called prior to updating a LeasingVehicle record
+func (v *LeasingVehicle) BeforeUpdate(tx *gorm.DB) (err error) {
+	// Retrieve the existing record from the database to compare values
+	var old LeasingVehicle
+	if err := tx.Unscoped().First(&old, v.ID).Error; err != nil {
+		return nil // skip if record does not exist
+	}
+
+	// We only track modifications post-RMV check (i.e. if RMV was already verified in the database)
+	if !old.RmvVerified {
+		return nil
+	}
+
+	// Helper function to log field changes
+	logChange := func(fieldName, oldValue, newValue string) {
+		if oldValue == newValue {
+			return
+		}
+
+		modifiedBy := "system"
+		if tx.Statement.Context != nil {
+			if uVal := tx.Statement.Context.Value("username"); uVal != nil {
+				if uStr, ok := uVal.(string); ok {
+					modifiedBy = uStr
+				}
+			}
+		}
+
+		audit := LeasingVehicleAudit{
+			LeasingVehicleID: v.ID,
+			FieldName:        fieldName,
+			OldValue:         oldValue,
+			NewValue:         newValue,
+			ModifiedBy:       modifiedBy,
+			Timestamp:        time.Now(),
+		}
+		tx.Create(&audit)
+	}
+
+	// Compare CR Master Data fields
+	logChange("DateOfFirstRegistration", old.DateOfFirstRegistration, v.DateOfFirstRegistration)
+	logChange("AbsoluteOwner", old.AbsoluteOwner, v.AbsoluteOwner)
+	logChange("RegisteredOwner", old.RegisteredOwner, v.RegisteredOwner)
+	logChange("PreviousOwnersCount", fmt.Sprintf("%d", old.PreviousOwnersCount), fmt.Sprintf("%d", v.PreviousOwnersCount))
+	logChange("VariantCode", old.VariantCode, v.VariantCode)
+	logChange("Transmission", old.Transmission, v.Transmission)
+	logChange("SeatingCapacity", fmt.Sprintf("%d", old.SeatingCapacity), fmt.Sprintf("%d", v.SeatingCapacity))
+	logChange("UnladenWeight", fmt.Sprintf("%.2f", old.UnladenWeight), fmt.Sprintf("%.2f", v.UnladenWeight))
+	logChange("MileageAtRegistration", fmt.Sprintf("%.2f", old.MileageAtRegistration), fmt.Sprintf("%.2f", v.MileageAtRegistration))
+	logChange("CrSerialNo", old.CrSerialNo, v.CrSerialNo)
+	logChange("CrIssueDate", old.CrIssueDate, v.CrIssueDate)
+	logChange("CrIssueOffice", old.CrIssueOffice, v.CrIssueOffice)
+	logChange("CrType", old.CrType, v.CrType)
+
+	return nil
 }

@@ -86,6 +86,7 @@ func Connect() {
 		&leasingModels.LeasingApplication{},
 		&leasingModels.LeasingVehicle{},
 		&leasingModels.LeasingVehicleDocumentImage{},
+		&leasingModels.LeasingVehicleAudit{},
 		&leasingModels.LeasingLoan{},
 		&leasingModels.LeasingGuarantor{},
 		&leasingModels.PdcSecurity{},

@@ -32,6 +32,11 @@ type DraftFormData struct {
 	PdcSecurities   []any  `json:"pdc_securities"`
 	Cheques         []any  `json:"cheques"`
 	OriginalCrNo    string `json:"original_cr_no"`
+	CrSerialNo      string `json:"cr_serial_no"`
+	UrlCrFront      string `json:"url_cr_front"`
+	UrlCrBack       string `json:"url_cr_back"`
+	UrlInvoice      string `json:"url_invoice"`
+	UrlValuation    string `json:"url_valuation"`
 }
 
 func validateDraft(data []byte) map[int]string {
@@ -94,8 +99,10 @@ func validateDraft(data []byte) map[int]string {
 	}
 
 	// Step 9: CR & Docs
-	if form.OriginalCrNo != "" {
+	if form.CrSerialNo != "" && form.UrlCrFront != "" && form.UrlCrBack != "" && form.UrlInvoice != "" {
 		statuses[9] = "complete"
+	} else if form.CrSerialNo != "" || form.UrlCrFront != "" {
+		statuses[9] = "error"
 	}
 
 	return statuses
@@ -358,7 +365,10 @@ func (ctrl *LeasingApplicationController) Get(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": app})
+	c.JSON(http.StatusOK, gin.H{
+		"data":          app,
+		"step_statuses": validateDraft([]byte(app.CurrentProgressData)),
+	})
 }
 
 // GetDrafts handles GET /api/v1/leasing-applications/drafts
