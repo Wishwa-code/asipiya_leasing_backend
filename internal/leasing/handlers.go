@@ -129,6 +129,8 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 			leasingApplications.POST("/draft", leasingAppCtrl.CreateDraft)
 			leasingApplications.PUT("/:id/draft", leasingAppCtrl.UpdateDraft)
 			leasingApplications.PUT("/:id/draft/step/:step_name", leasingAppCtrl.UpdateDraftStep)
+			leasingApplications.GET("/:id/pdc-security", leasingAppCtrl.GetPdcSecurity)
+			leasingApplications.PUT("/:id/pdc-security", leasingAppCtrl.UpdatePdcSecurity)
 			leasingApplications.POST("/:id/upload-document", leasingAppCtrl.UploadDocument)
 			leasingApplications.POST("/:id/submit", leasingAppCtrl.Submit)
 		}

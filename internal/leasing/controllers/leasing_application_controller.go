@@ -296,6 +296,15 @@ func (ctrl *LeasingApplicationController) Submit(c *gin.Context) {
 		}
 	}
 
+	// Clean up any existing PDC Security and detail records for this leasing application to avoid conflicts
+	var existingPdc models.PdcSecurity
+	if err := tx.Where("leasing_application_id = ?", app.ID).First(&existingPdc).Error; err == nil {
+		tx.Unscoped().Where("pdc_security_id = ?", existingPdc.ID).Delete(&models.PdcChequeDetail{})
+		tx.Unscoped().Where("pdc_security_id = ?", existingPdc.ID).Delete(&models.PdcCrBookDetail{})
+		tx.Unscoped().Where("pdc_security_id = ?", existingPdc.ID).Delete(&models.PdcDeedDetail{})
+		tx.Unscoped().Delete(&existingPdc)
+	}
+
 	fullData.PdcSecurity.LeasingApplicationID = &app.ID
 	if err := tx.Create(&fullData.PdcSecurity).Error; err != nil {
 		tx.Rollback()
@@ -338,6 +347,9 @@ func (ctrl *LeasingApplicationController) Get(c *gin.Context) {
 		Preload("Guarantors").
 		Preload("PdcSecurity").
 		Preload("PdcSecurity.ChequeDetails").
+		Preload("PdcSecurity.ChequeDetails.Bank").
+		Preload("PdcSecurity.CrBookDetails").
+		Preload("PdcSecurity.DeedDetails").
 		Preload("ChequeDefine").
 		Preload("ChequeDefine.Items").
 		Preload("DocumentImages").
@@ -501,4 +513,146 @@ func parseUint(val interface{}) (uint, error) {
 		}
 	}
 	return 0, fmt.Errorf("invalid type for uint")
+}
+
+// GetPdcSecurity handles GET /api/v1/leasing-applications/:id/pdc-security
+func (ctrl *LeasingApplicationController) GetPdcSecurity(c *gin.Context) {
+	id := c.Param("id")
+	var pdc models.PdcSecurity
+	if err := ctrl.DB.
+		Preload("ChequeDetails").
+		Preload("ChequeDetails.Bank").
+		Preload("CrBookDetails").
+		Preload("DeedDetails").
+		Where("leasing_application_id = ?", id).
+		First(&pdc).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "PDC Security not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch PDC security: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": pdc})
+}
+
+// UpdatePdcSecurity handles PUT /api/v1/leasing-applications/:id/pdc-security
+func (ctrl *LeasingApplicationController) UpdatePdcSecurity(c *gin.Context) {
+	id := c.Param("id")
+	
+	// Parse input payload
+	var req models.PdcSecurity
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
+		return
+	}
+
+	// Start transaction
+	tx := ctrl.DB.Begin()
+
+	// Verify application exists
+	var app models.LeasingApplication
+	if err := tx.First(&app, id).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusNotFound, gin.H{"error": "Leasing application not found"})
+		return
+	}
+
+	// Check if a PdcSecurity already exists
+	var existingPdc models.PdcSecurity
+	hasExisting := true
+	if err := tx.Where("leasing_application_id = ?", id).First(&existingPdc).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			hasExisting = false
+		} else {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search existing PDC security: " + err.Error()})
+			return
+		}
+	}
+
+	var pdcID uint
+	if hasExisting {
+		// Delete existing details records to prevent duplicates / orphans
+		tx.Unscoped().Where("pdc_security_id = ?", existingPdc.ID).Delete(&models.PdcChequeDetail{})
+		tx.Unscoped().Where("pdc_security_id = ?", existingPdc.ID).Delete(&models.PdcCrBookDetail{})
+		tx.Unscoped().Where("pdc_security_id = ?", existingPdc.ID).Delete(&models.PdcDeedDetail{})
+
+		// Update parent
+		existingPdc.PdcSecurityType = req.PdcSecurityType
+		if err := tx.Save(&existingPdc).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update PDC security: " + err.Error()})
+			return
+		}
+		pdcID = existingPdc.ID
+	} else {
+		// Create new PdcSecurity
+		req.LeasingApplicationID = &app.ID
+		// Clear nested details so GORM doesn't try to automatically insert them with potential issues
+		chequeDetails := req.ChequeDetails
+		crBookDetails := req.CrBookDetails
+		deedDetails := req.DeedDetails
+
+		req.ChequeDetails = nil
+		req.CrBookDetails = nil
+		req.DeedDetails = nil
+
+		if err := tx.Create(&req).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create PDC security: " + err.Error()})
+			return
+		}
+		pdcID = req.ID
+
+		req.ChequeDetails = chequeDetails
+		req.CrBookDetails = crBookDetails
+		req.DeedDetails = deedDetails
+	}
+
+	// Insert details based on the selected security type
+	if req.PdcSecurityType == "Cheque" {
+		for i := range req.ChequeDetails {
+			req.ChequeDetails[i].PdcSecurityID = &pdcID
+			if err := tx.Create(&req.ChequeDetails[i]).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save cheque details: " + err.Error()})
+				return
+			}
+		}
+	} else if req.PdcSecurityType == "CR Book" || req.PdcSecurityType == "CR Book (Certificate of Registration)" {
+		for i := range req.CrBookDetails {
+			req.CrBookDetails[i].PdcSecurityID = &pdcID
+			if err := tx.Create(&req.CrBookDetails[i]).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save CR Book details: " + err.Error()})
+				return
+			}
+		}
+	} else if req.PdcSecurityType == "Deed" || req.PdcSecurityType == "Deed (Signed Contract)" {
+		for i := range req.DeedDetails {
+			req.DeedDetails[i].PdcSecurityID = &pdcID
+			if err := tx.Create(&req.DeedDetails[i]).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save Deed details: " + err.Error()})
+				return
+			}
+		}
+	}
+
+	tx.Commit()
+
+	// Fetch full saved object to return to caller
+	var updatedPdc models.PdcSecurity
+	ctrl.DB.
+		Preload("ChequeDetails").
+		Preload("ChequeDetails.Bank").
+		Preload("CrBookDetails").
+		Preload("DeedDetails").
+		First(&updatedPdc, pdcID)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "PDC Security details saved successfully",
+		"data":    updatedPdc,
+	})
 }
