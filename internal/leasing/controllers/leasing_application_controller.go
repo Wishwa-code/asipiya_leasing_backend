@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"garment-management-backend/internal/leasing/models"
+	"garment-management-backend/internal/leasing/validation"
 	"io"
 	"net/http"
 	"os"
@@ -365,9 +366,47 @@ func (ctrl *LeasingApplicationController) Get(c *gin.Context) {
 		return
 	}
 
+	// Parse existing progress data to validate each step
+	var progressData map[string]interface{}
+	if app.CurrentProgressData != "" {
+		json.Unmarshal([]byte(app.CurrentProgressData), &progressData)
+	}
+
+	// Step names mapping for verification
+	stepNames := map[int]string{
+		1: "step-customer",
+		2: "step-introducers",
+		3: "step-vehicle",
+		4: "step-insurance",
+		5: "step-lease-details",
+		6: "step-guarantors",
+		7: "step-pdc-security",
+		8: "step-cheque-define",
+		9: "step-documents",
+	}
+
+	stepErrors := make(map[string]map[string]string)
+	if progressData != nil {
+		for stepNum, sName := range stepNames {
+			stepFields := getStepFieldsMap(stepNum, progressData)
+			errs := validation.ValidateStep(ctrl.DB, sName, stepFields)
+			if len(errs) > 0 {
+				stepErrors[sName] = errs
+			} else {
+				stepErrors[sName] = make(map[string]string)
+			}
+		}
+	} else {
+		// Initialize empty errors map for all steps
+		for _, sName := range stepNames {
+			stepErrors[sName] = make(map[string]string)
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"data":          app,
 		"step_statuses": validateDraft([]byte(app.CurrentProgressData)),
+		"step_errors":   stepErrors,
 	})
 }
 
@@ -504,8 +543,12 @@ func (ctrl *LeasingApplicationController) UpdateDraftStep(c *gin.Context) {
 		return
 	}
 
+	// Run Strategy validation
+	stepErrors := validation.ValidateStep(ctrl.DB, stepName, stepData)
+
 	c.JSON(http.StatusOK, gin.H{
 		"message":       fmt.Sprintf("Step '%s' draft updated successfully", stepName),
+		"errors":        stepErrors,
 		"step_statuses": validateDraft(updatedBytes),
 	})
 }
@@ -665,4 +708,64 @@ func (ctrl *LeasingApplicationController) UpdatePdcSecurity(c *gin.Context) {
 		"message": "PDC Security details saved successfully",
 		"data":    updatedPdc,
 	})
+}
+
+func getStepFieldsMap(step int, data map[string]interface{}) map[string]interface{} {
+	fields := make(map[string]interface{})
+
+	copyKeys := func(keys []string) {
+		for _, k := range keys {
+			if v, ok := data[k]; ok {
+				fields[k] = v
+			}
+		}
+	}
+
+	switch step {
+	case 1:
+		copyKeys([]string{"customer_id", "customer_code", "customer_name", "bank_account_id"})
+	case 2:
+		copyKeys([]string{"introducers"})
+	case 3:
+		copyKeys([]string{
+			"vehicle_type", "vehicle_type_id", "vehicle_make", "vehicle_make_id",
+			"vehicle_model", "vehicle_model_id", "vehicle_status", "engine_cc",
+			"chassis_no", "manu_year", "color", "usage_type", "manu_country",
+			"body_type", "equipment", "reg_year", "reg_no", "valuation_no",
+			"market_value", "forced_value", "invoice_value", "supplier_name",
+			"supplier_address", "supplier_mobile", "supplier_id", "supplier_rno",
+		})
+	case 4:
+		copyKeys([]string{
+			"insurance_company", "insurance_amount", "insurance_premium",
+			"insurance_start_date", "insurance_expiry_date",
+		})
+	case 5:
+		copyKeys([]string{
+			"product_id", "product_item", "product_item_id", "marketing_executive_id",
+			"inspection_date", "loan_amount", "period", "interest_rate",
+			"installments_total", "total_interest", "total_payable",
+			"tcc_collection_date", "bank_id", "branch_id", "account_number",
+			"bank_account_id", "ltv", "disburse_amount", "installment_amount",
+			"other_charges_total", "other_charges_on_disburse",
+			"other_charges_on_first_installment", "other_charges_on_every_installments",
+			"required_guarantor_count",
+		})
+	case 6:
+		copyKeys([]string{"guarantors", "required_guarantor_count"})
+	case 7:
+		copyKeys([]string{
+			"pdc_security_type", "pdc_cheque_status", "pdc_bank_id",
+			"pdc_cheque_date", "pdc_cheque_no", "pdc_ownership",
+			"pdc_book_date", "pdc_reference_details",
+		})
+	case 8:
+		copyKeys([]string{"cheques"})
+	case 9:
+		copyKeys([]string{
+			"original_cr_no", "duplicate_key", "documents", "cr_serial_no",
+			"url_cr_front", "url_cr_back", "url_invoice", "url_valuation",
+		})
+	}
+	return fields
 }
