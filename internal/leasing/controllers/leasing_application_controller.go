@@ -20,28 +20,89 @@ type LeasingApplicationController struct {
 	DB *gorm.DB
 }
 
-// DraftFormData maps the frontend state to check step completion statuses
-type DraftFormData struct {
-	CustomerID      string `json:"customer_id"`
-	Introducers     []any  `json:"introducers"`
-	VehicleMake     string `json:"vehicle_make"`
-	VehicleModel    string `json:"vehicle_model"`
-	InsuranceCompany string `json:"insurance_company"`
-	ProductID       string `json:"product_id"`
-	LoanAmount      string `json:"loan_amount"`
-	Guarantors      []any  `json:"guarantors"`
-	PdcSecurities   []any  `json:"pdc_securities"`
-	Cheques         []any  `json:"cheques"`
-	OriginalCrNo    string `json:"original_cr_no"`
-	CrSerialNo      string `json:"cr_serial_no"`
-	UrlCrFront      string `json:"url_cr_front"`
-	UrlCrBack       string `json:"url_cr_back"`
-	UrlInvoice      string `json:"url_invoice"`
-	UrlValuation    string `json:"url_valuation"`
+// isStepTouched returns true if the user has entered some data for a specific step.
+func isStepTouched(stepNum int, fields map[string]interface{}) bool {
+	switch stepNum {
+	case 1:
+		cid, ok := fields["customer_id"]
+		if ok && cid != nil && fmt.Sprintf("%v", cid) != "" && fmt.Sprintf("%v", cid) != "0" {
+			return true
+		}
+	case 2:
+		intros, ok := fields["introducers"].([]interface{})
+		if ok && len(intros) > 0 {
+			return true
+		}
+	case 3:
+		makeID, _ := fields["vehicle_make_id"]
+		modelID, _ := fields["vehicle_model_id"]
+		chassisNo, _ := fields["chassis_no"]
+		regNo, _ := fields["reg_no"]
+		if (makeID != nil && fmt.Sprintf("%v", makeID) != "" && fmt.Sprintf("%v", makeID) != "0") ||
+			(modelID != nil && fmt.Sprintf("%v", modelID) != "" && fmt.Sprintf("%v", modelID) != "0") ||
+			(chassisNo != nil && fmt.Sprintf("%v", chassisNo) != "") ||
+			(regNo != nil && fmt.Sprintf("%v", regNo) != "") {
+			return true
+		}
+	case 4:
+		company, _ := fields["insurance_company"]
+		amount, _ := fields["insurance_amount"]
+		premium, _ := fields["insurance_premium"]
+		startDate, _ := fields["insurance_start_date"]
+		endDate, _ := fields["insurance_expiry_date"]
+		if (company != nil && fmt.Sprintf("%v", company) != "") ||
+			(amount != nil && fmt.Sprintf("%v", amount) != "" && fmt.Sprintf("%v", amount) != "0" && fmt.Sprintf("%v", amount) != "0.00") ||
+			(premium != nil && fmt.Sprintf("%v", premium) != "" && fmt.Sprintf("%v", premium) != "0" && fmt.Sprintf("%v", premium) != "0.00") ||
+			(startDate != nil && fmt.Sprintf("%v", startDate) != "") ||
+			(endDate != nil && fmt.Sprintf("%v", endDate) != "") {
+			return true
+		}
+	case 5:
+		prodID, _ := fields["product_id"]
+		loanAmt, _ := fields["loan_amount"]
+		if (prodID != nil && fmt.Sprintf("%v", prodID) != "" && fmt.Sprintf("%v", prodID) != "0") ||
+			(loanAmt != nil && fmt.Sprintf("%v", loanAmt) != "" && fmt.Sprintf("%v", loanAmt) != "0" && fmt.Sprintf("%v", loanAmt) != "0.00") {
+			return true
+		}
+	case 6:
+		guars, ok := fields["guarantors"].([]interface{})
+		if ok && len(guars) > 0 {
+			return true
+		}
+	case 7:
+		secType, _ := fields["pdc_security_type"].(string)
+		refDetails, _ := fields["pdc_reference_details"].(string)
+		bankID, _ := fields["pdc_bank_id"]
+		chequeNo, _ := fields["pdc_cheque_no"].(string)
+		bookDate, _ := fields["pdc_book_date"].(string)
+		if refDetails != "" ||
+			secType == "Cheque" ||
+			secType == "CR Book" ||
+			(bankID != nil && fmt.Sprintf("%v", bankID) != "" && fmt.Sprintf("%v", bankID) != "0") ||
+			chequeNo != "" ||
+			bookDate != "" {
+			return true
+		}
+	case 8:
+		cheques, ok := fields["cheques"].([]interface{})
+		if ok && len(cheques) > 0 {
+			return true
+		}
+	case 9:
+		crNo, _ := fields["original_cr_no"].(string)
+		serialNo, _ := fields["cr_serial_no"].(string)
+		urlFront, _ := fields["url_cr_front"].(string)
+		urlBack, _ := fields["url_cr_back"].(string)
+		urlInvoice, _ := fields["url_invoice"].(string)
+		if crNo != "" || serialNo != "" || urlFront != "" || urlBack != "" || urlInvoice != "" {
+			return true
+		}
+	}
+	return false
 }
 
-func validateDraft(data []byte) map[int]string {
-	var form DraftFormData
+// validateDraft evaluates the completion status for each leasing application wizard step using strategy validation
+func (ctrl *LeasingApplicationController) validateDraft(data []byte) map[int]string {
 	statuses := make(map[int]string)
 	for i := 1; i <= 9; i++ {
 		statuses[i] = "" // Default pristine (no color)
@@ -51,59 +112,36 @@ func validateDraft(data []byte) map[int]string {
 		return statuses
 	}
 
-	json.Unmarshal(data, &form)
-
-	// Step 1: Customer
-	if form.CustomerID != "" {
-		statuses[1] = "complete" // Green
-	} else {
-		statuses[1] = "error" // Orange
+	var progressData map[string]interface{}
+	if err := json.Unmarshal(data, &progressData); err != nil {
+		return statuses
 	}
 
-	// Step 2: Introducers (Optional, but if they visited or added)
-	if len(form.Introducers) > 0 {
-		statuses[2] = "complete"
+	stepNames := map[int]string{
+		1: "step-customer",
+		2: "step-introducers",
+		3: "step-vehicle",
+		4: "step-insurance",
+		5: "step-lease-details",
+		6: "step-guarantors",
+		7: "step-pdc-security",
+		8: "step-cheque-define",
+		9: "step-documents",
 	}
 
-	// Step 3: Vehicle Asset
-	if form.VehicleMake != "" && form.VehicleModel != "" {
-		statuses[3] = "complete"
-	} else if form.VehicleMake != "" || form.VehicleModel != "" {
-		statuses[3] = "error"
-	}
+	for stepNum, sName := range stepNames {
+		stepFields := getStepFieldsMap(stepNum, progressData)
+		if !isStepTouched(stepNum, stepFields) {
+			statuses[stepNum] = ""
+			continue
+		}
 
-	// Step 4: Insurance
-	if form.InsuranceCompany != "" {
-		statuses[4] = "complete"
-	}
-
-	// Step 5: Lease Details
-	if form.ProductID != "" && form.LoanAmount != "" && form.LoanAmount != "0.00" {
-		statuses[5] = "complete"
-	} else if form.ProductID != "" || form.LoanAmount != "" {
-		statuses[5] = "error"
-	}
-
-	// Step 6: Guarantors
-	if len(form.Guarantors) > 0 {
-		statuses[6] = "complete"
-	}
-
-	// Step 7: PDC Security
-	if len(form.PdcSecurities) > 0 {
-		statuses[7] = "complete"
-	}
-
-	// Step 8: Cheque Define
-	if len(form.Cheques) > 0 {
-		statuses[8] = "complete"
-	}
-
-	// Step 9: CR & Docs
-	if form.CrSerialNo != "" && form.UrlCrFront != "" && form.UrlCrBack != "" && form.UrlInvoice != "" {
-		statuses[9] = "complete"
-	} else if form.CrSerialNo != "" || form.UrlCrFront != "" {
-		statuses[9] = "error"
+		errs := validation.ValidateStep(ctrl.DB, sName, stepFields)
+		if len(errs) > 0 {
+			statuses[stepNum] = "error"
+		} else {
+			statuses[stepNum] = "complete"
+		}
 	}
 
 	return statuses
@@ -140,7 +178,7 @@ func (ctrl *LeasingApplicationController) CreateDraft(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Draft created successfully",
 		"data":    app,
-		"step_statuses": validateDraft(req.CurrentProgressData),
+		"step_statuses": ctrl.validateDraft(req.CurrentProgressData),
 	})
 }
 
@@ -172,7 +210,7 @@ func (ctrl *LeasingApplicationController) UpdateDraft(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Draft updated successfully",
-		"step_statuses": validateDraft(req.CurrentProgressData),
+		"step_statuses": ctrl.validateDraft(req.CurrentProgressData),
 	})
 }
 
@@ -350,6 +388,7 @@ func (ctrl *LeasingApplicationController) Get(c *gin.Context) {
 		Preload("Customer").
 		Preload("Introducer").
 		Preload("Vehicle").
+		Preload("Vehicle.Color").
 		Preload("Vehicle.Images").
 		Preload("Loan").
 		Preload("Guarantors").
@@ -405,7 +444,7 @@ func (ctrl *LeasingApplicationController) Get(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"data":          app,
-		"step_statuses": validateDraft([]byte(app.CurrentProgressData)),
+		"step_statuses": ctrl.validateDraft([]byte(app.CurrentProgressData)),
 		"step_errors":   stepErrors,
 	})
 }
@@ -549,7 +588,7 @@ func (ctrl *LeasingApplicationController) UpdateDraftStep(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":       fmt.Sprintf("Step '%s' draft updated successfully", stepName),
 		"errors":        stepErrors,
-		"step_statuses": validateDraft(updatedBytes),
+		"step_statuses": ctrl.validateDraft(updatedBytes),
 	})
 }
 
@@ -723,15 +762,20 @@ func getStepFieldsMap(step int, data map[string]interface{}) map[string]interfac
 
 	switch step {
 	case 1:
-		copyKeys([]string{"customer_id", "customer_code", "customer_name", "bank_account_id"})
+		if v, ok := data["customer_id"]; ok {
+			fields["customer_id"] = v
+		} else if v, ok := data["customer_db_id"]; ok {
+			fields["customer_id"] = v
+		}
+		copyKeys([]string{"customer_code", "customer_name", "bank_account_id"})
 	case 2:
 		copyKeys([]string{"introducers"})
 	case 3:
 		copyKeys([]string{
 			"vehicle_type", "vehicle_type_id", "vehicle_make", "vehicle_make_id",
 			"vehicle_model", "vehicle_model_id", "vehicle_status", "engine_cc",
-			"chassis_no", "manu_year", "color", "usage_type", "manu_country",
-			"body_type", "equipment", "reg_year", "reg_no", "valuation_no",
+			"chassis_no", "manu_year", "color", "color_id", "usage_type", "manu_country",
+			"body_type", "equipment", "reg_year", "reg_no", "registration_no", "valuation_no",
 			"market_value", "forced_value", "invoice_value", "supplier_name",
 			"supplier_address", "supplier_mobile", "supplier_id", "supplier_rno",
 		})

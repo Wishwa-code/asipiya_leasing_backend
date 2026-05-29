@@ -94,26 +94,132 @@ type VehicleStepValidator struct{}
 func (v *VehicleStepValidator) Validate(db *gorm.DB, data map[string]interface{}) map[string]string {
 	errors := make(map[string]string)
 
-	makeIDVal, ok := data["vehicle_make_id"]
-	if !ok || makeIDVal == nil || fmt.Sprintf("%v", makeIDVal) == "" {
-		errors["vehicle_make_id"] = "Vehicle make is required"
-	} else if makeID, okParsed := parseUintVal(makeIDVal); okParsed {
-		var count int64
-		db.Table("vehicle_makes").Where("id = ? AND status = 'Active'", makeID).Count(&count)
-		if count == 0 {
-			errors["vehicle_make_id"] = "Selected vehicle make does not exist or is inactive"
+	// Helper to get string val or fallback
+	getStringVal := func(keys ...string) (string, string) {
+		for _, k := range keys {
+			if val, ok := data[k]; ok && val != nil {
+				return fmt.Sprintf("%v", val), k
+			}
 		}
+		return "", keys[0]
 	}
 
-	modelIDVal, ok := data["vehicle_model_id"]
-	if !ok || modelIDVal == nil || fmt.Sprintf("%v", modelIDVal) == "" {
-		errors["vehicle_model_id"] = "Vehicle model is required"
-	} else if modelID, okParsed := parseUintVal(modelIDVal); okParsed {
+	// 1. Asset Type (vehicle_type_id)
+	typeVal, typeKey := getStringVal("vehicle_type_id")
+	if typeVal == "" {
+		errors[typeKey] = "Asset type is required"
+	} else if tid, ok := parseUintVal(typeVal); ok {
 		var count int64
-		db.Table("vehicle_models").Where("id = ? AND status = 'Active'", modelID).Count(&count)
+		db.Table("vehicle_types").Where("id = ? AND status = 'Active'", tid).Count(&count)
 		if count == 0 {
-			errors["vehicle_model_id"] = "Selected vehicle model does not exist or is inactive"
+			errors[typeKey] = "Selected asset type does not exist or is inactive"
 		}
+	} else {
+		errors[typeKey] = "Invalid asset type format"
+	}
+
+	// 2. Make (vehicle_make_id)
+	makeVal, makeKey := getStringVal("vehicle_make_id")
+	if makeVal == "" {
+		errors[makeKey] = "Vehicle make is required"
+	} else if mid, ok := parseUintVal(makeVal); ok {
+		var count int64
+		db.Table("vehicle_makes").Where("id = ? AND status = 'Active'", mid).Count(&count)
+		if count == 0 {
+			errors[makeKey] = "Selected vehicle make does not exist or is inactive"
+		}
+	} else {
+		errors[makeKey] = "Invalid make format"
+	}
+
+	// 3. Model (vehicle_model_id)
+	modelVal, modelKey := getStringVal("vehicle_model_id")
+	if modelVal == "" {
+		errors[modelKey] = "Vehicle model is required"
+	} else if mid, ok := parseUintVal(modelVal); ok {
+		var count int64
+		db.Table("vehicle_models").Where("id = ? AND status = 'Active'", mid).Count(&count)
+		if count == 0 {
+			errors[modelKey] = "Selected vehicle model does not exist or is inactive"
+		}
+	} else {
+		errors[modelKey] = "Invalid model format"
+	}
+
+	// 4. Asset Status (vehicle_status)
+	statusVal, statusKey := getStringVal("vehicle_status")
+	if statusVal == "" {
+		errors[statusKey] = "Asset status is required"
+	}
+
+	// 5. Engine CC (engine_cc)
+	engineVal, engineKey := getStringVal("engine_cc")
+	if engineVal == "" {
+		errors[engineKey] = "Engine CC is required"
+	}
+
+	// 6. Chassis No (chassis_no / chasis_no)
+	chassisVal, chassisKey := getStringVal("chassis_no", "chasis_no")
+	if chassisVal == "" {
+		errors[chassisKey] = "Chassis number is required"
+	}
+
+	// 7. Manufacturing Year (manu_year / manufacturing_year)
+	manuVal, manuKey := getStringVal("manu_year", "manufacturing_year")
+	if manuVal == "" {
+		errors[manuKey] = "Manufacturing year is required"
+	}
+
+	// 8. Color (color_id)
+	colorVal, colorKey := getStringVal("color_id")
+	if colorVal == "" {
+		errors[colorKey] = "Color is required"
+	} else if cid, ok := parseUintVal(colorVal); ok {
+		var count int64
+		db.Table("colors").Where("id = ? AND status = 'Active'", cid).Count(&count)
+		if count == 0 {
+			errors[colorKey] = "Selected color does not exist or is inactive"
+		}
+	} else {
+		errors[colorKey] = "Invalid color format"
+	}
+
+	// 9. Usage (usage_type / usage)
+	usageVal, usageKey := getStringVal("usage_type", "usage")
+	if usageVal == "" {
+		errors[usageKey] = "Usage is required"
+	}
+
+	// 10. Country of Origin (manu_country / country_of_origin)
+	countryVal, countryKey := getStringVal("manu_country", "country_of_origin")
+	if countryVal == "" {
+		errors[countryKey] = "Country of origin is required"
+	}
+
+	// 11. Reg Year (reg_year / registered_year)
+	regYearVal, regYearKey := getStringVal("reg_year", "registered_year")
+	if regYearVal == "" {
+		errors[regYearKey] = "Registered year is required"
+	}
+
+	// 12. Reg No (reg_no / registered_no / registration_no)
+	regNoVal, regNoKey := getStringVal("reg_no", "registered_no", "registration_no")
+	if regNoVal == "" {
+		errors[regNoKey] = "Registered number is required"
+	}
+
+	// 13. Supplier (supplier_id)
+	supplierVal, supplierKey := getStringVal("supplier_id")
+	if supplierVal == "" {
+		errors[supplierKey] = "Supplier is required"
+	} else if sid, ok := parseUintVal(supplierVal); ok {
+		var count int64
+		db.Table("suppliers").Where("id = ? AND deleted_at IS NULL", sid).Count(&count)
+		if count == 0 {
+			errors[supplierKey] = "Selected supplier does not exist"
+		}
+	} else {
+		errors[supplierKey] = "Invalid supplier format"
 	}
 
 	validateNumeric := func(fieldName string, label string) {

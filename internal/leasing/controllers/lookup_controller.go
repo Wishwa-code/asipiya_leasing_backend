@@ -110,7 +110,7 @@ func (ctrl *LookupController) GetRmvData(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"registered_no":      regNo,
+			"registration_no":    regNo,
 			"chasis_no":          chassisNo,
 			"vehicle_make":       "Toyota",
 			"vehicle_model":      "Prius",
@@ -121,4 +121,14 @@ func (ctrl *LookupController) GetRmvData(c *gin.Context) {
 			"gross_weight":       "1350",
 		},
 	})
+}
+
+// GetColors handles GET /api/lookup/colors
+func (ctrl *LookupController) GetColors(c *gin.Context) {
+	var colors []adminModels.Color
+	if err := ctrl.DB.Where("status = ?", "Active").Find(&colors).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch colors"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": colors})
 }

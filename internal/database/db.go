@@ -75,6 +75,7 @@ func Connect() {
 		&adminModels.VehicleType{},
 		&adminModels.VehicleMake{},
 		&adminModels.VehicleModel{},
+		&adminModels.Color{},
 		&leasingModels.Supplier{},
 		&leasingModels.Seizer{},
 		&leasingModels.Introducer{},

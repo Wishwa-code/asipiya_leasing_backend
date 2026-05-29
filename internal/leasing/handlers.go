@@ -103,6 +103,7 @@ func RegisterRoutes(rg *gin.RouterGroup) {
 			lookups.GET("/vehicle-types", lookupCtrl.GetVehicleTypes)
 			lookups.GET("/vehicle-makes", lookupCtrl.GetVehicleMakes)
 			lookups.GET("/vehicle-models", lookupCtrl.GetVehicleModels)
+			lookups.GET("/colors", lookupCtrl.GetColors)
 			lookups.GET("/marketing-executives", lookupCtrl.GetMarketingExecutives)
 			lookups.GET("/rmv-data", lookupCtrl.GetRmvData)
 		}

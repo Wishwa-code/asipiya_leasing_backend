@@ -25,7 +25,7 @@ type LeasingVehicle struct {
 	TypeOfBody           string  `gorm:"column:type_of_body;type:varchar(100)" json:"type_of_body"`
 	Equipment            string  `gorm:"column:equipment;type:text" json:"equipment"`
 	RegisteredYear       string  `gorm:"column:registered_year;type:varchar(10)" json:"registered_year"`
-	RegisteredNo         string  `gorm:"column:registered_no;type:varchar(100)" json:"registered_no"`
+	RegistrationNo       string  `gorm:"column:registration_no;type:varchar(100)" json:"registration_no"`
 	ValuationCompanyID   *uint   `gorm:"column:valuation_company_id" json:"valuation_company_id"`
 	InsuranceCompanyID   *uint   `gorm:"column:insurance_company_id" json:"insurance_company_id"`
 	InsuranceAmount      float64 `gorm:"column:insurance_amount" json:"insurance_amount"`
@@ -68,6 +68,7 @@ type LeasingVehicle struct {
 	VehicleType        *adminModels.VehicleType      `gorm:"foreignKey:VehicleTypeID" json:"vehicle_type,omitempty"`
 	VehicleMake        *adminModels.VehicleMake      `gorm:"foreignKey:VehicleMakeID" json:"vehicle_make,omitempty"`
 	VehicleModel       *adminModels.VehicleModel     `gorm:"foreignKey:VehicleModelID" json:"vehicle_model,omitempty"`
+	Color              *adminModels.Color            `gorm:"foreignKey:ColorID" json:"color,omitempty"`
 	ValuationCompany   *ValuationCompany             `gorm:"foreignKey:ValuationCompanyID" json:"valuation_company,omitempty"`
 	InsuranceCompany   *InsuranceCompany             `gorm:"foreignKey:InsuranceCompanyID" json:"insurance_company,omitempty"`
 	Supplier           *Supplier                     `gorm:"foreignKey:SupplierID" json:"supplier,omitempty"`
